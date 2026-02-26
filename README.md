@@ -1,10 +1,11 @@
 # CG 2025/2026
 
-## Group T0xG0y
+## Group T12G05
 | Name             | Number    | E-Mail             |
 | ---------------- | --------- | ------------------ |
-| John Doe         | 201901010 | ...                |
-| Jane Doe         | 201901011 | ...                |
+| Maria Inês Pinho        | 202306659 | up202306659@up.pt                |
+| Maria Luiza Vieira         | 202304306 | up202304306@up.pt                |
+| Mariana Almeida         | 202405731 | up202405731@up.pt                |
 
 ----
 
