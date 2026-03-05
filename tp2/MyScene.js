@@ -38,6 +38,10 @@ export class MyScene extends CGFscene {
     //Objects connected to MyInterface
     this.displayAxis = true;
     this.scaleFactor = 1;
+    this.xFactor = 0;
+    this.yFactor = 0;
+    this.zFactor = 0;
+    this.angle = 0;
     this.displayDiamond = true;
     this.displayTriangle = true;
     this.displayParallelogram = true;
@@ -101,10 +105,61 @@ export class MyScene extends CGFscene {
       1.0,
     ];
 
+    var tra = [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+
+      0.0,
+      1.0,
+      0.0,
+      0.0,
+
+      0.0,
+      0.0,
+      1.0,
+      0.0,
+      
+      this.xFactor,
+      this.yFactor,
+      this.zFactor,
+      1.0,
+    ];
+
+    var rot = [
+      Math.cos(this.angle),
+      Math.sin(this.angle),
+      0.0,
+      0.0,
+
+      -Math.sin(this.angle),
+      Math.cos(this.angle),
+      0.0,
+      0.0,
+
+      0.0,
+      0.0,
+      1.0,
+      0.0,
+      
+      0.0,
+      0.0,
+      0.0,
+      1.0,
+
+    ];
+
     this.multMatrix(sca);
 
     // ---- BEGIN Primitive drawing section
-
+    
+    // template de fazer a cena 
+    this.pushMatrix();
+    // this.translate(x, y, 0); //translate para a posição
+    this.rotate(angle, 0, 0, 1); //rotação para o ângulo desejado
+    this.diamond.display();
+    this.popMatrix();
     
     if (this.displayDiamond) this.diamond.display();
     if (this.displayTriangle) this.triangle.display();
