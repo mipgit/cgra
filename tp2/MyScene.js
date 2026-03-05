@@ -153,14 +153,15 @@ export class MyScene extends CGFscene {
     this.multMatrix(sca);
 
     // ---- BEGIN Primitive drawing section
-    
-    // green square (diamond)
+
+    // green diamond
     this.pushMatrix();
 
     this.angle = 45 * Math.PI / 180;
     this.xFactor = 1 * Math.cos(this.angle);
     this.yFactor = 1 * Math.sin(this.angle);
-
+      
+    this.multMatrix(sca);
     this.multMatrix(tra);
     this.multMatrix(rot);
 
@@ -168,12 +169,33 @@ export class MyScene extends CGFscene {
     this.diamond.display();    
     this.popMatrix();
 
-    // red triangle
+    // yellow paralelogram
+    
     this.pushMatrix();
 
-    this.popMatrix();
+    this.translate(4  * Math.cos(this.angle), -2 * Math.sin(this.angle), 0);
+    this.rotate(135 * Math.PI / 180, 0, 0, 1);
+    this.rotate(180 * Math.PI / 180, 1, 0, 0);
 
     
+    this.setDiffuse(1,1,0,1);
+    this.parallelogram.display();
+    this.popMatrix();
+
+    // red triangle
+    this.pushMatrix();
+    this.angle = -45 * Math.PI / 180;
+    this.rotate(this.angle, 0, 0, 1);
+    this.translate(-1, 0, 0);
+    
+    this.triangleSmall.display();
+    
+    this.setDiffuse(1,0,0,0);
+    this.popMatrix();
+
+
+    
+  
 
 
     
