@@ -29,26 +29,21 @@ export class MyScene extends CGFscene {
 
     //Initialize scene objects
     this.axis = new CGFaxis(this);
-
-    // Tangram pieces (7 total)
-    this.diamond        = new MyDiamond(this);
-    this.parallelogram  = new MyParallelogram(this);
-    this.triangle       = new MyTriangle(this);
-    this.triangleBig1   = new MyTriangleBig(this);
-    this.triangleBig2   = new MyTriangleBig(this);
-    this.triangleSmall1 = new MyTriangleSmall(this);
-    this.triangleSmall2 = new MyTriangleSmall(this);
+    this.diamond = new MyDiamond(this);
+    this.triangle = new MyTriangle(this);
+    this.parallelogram = new MyParallelogram(this);
+    this.triangleSmall = new MyTriangleSmall(this);
+    this.triangleBig = new MyTriangleBig(this);
 
     //Objects connected to MyInterface
-    this.displayAxis        = true;
-    this.displayDiamond     = true;
-    this.displayParallelogram = true;
-    this.displayTriangle    = true;
-    this.displayTriangleBig1   = true;
-    this.displayTriangleBig2   = true;
-    this.displayTriangleSmall1 = true;
-    this.displayTriangleSmall2 = true;
+    this.displayAxis = true;
     this.scaleFactor = 1;
+    this.xFactor = 0;
+    this.yFactor = 0;
+    this.zFactor = 0;
+    this.displayDiamond = true;
+    this.displayTriangle = true;
+    this.displayParallelogram = true;
   }
   initLights() {
     this.lights[0].setPosition(15, 2, 5, 1);
@@ -92,80 +87,122 @@ export class MyScene extends CGFscene {
       0.0,
       0.0,
       0.0,
+
       0.0,
       this.scaleFactor,
       0.0,
       0.0,
+
       0.0,
       0.0,
       this.scaleFactor,
       0.0,
+      
       0.0,
       0.0,
       0.0,
       1.0,
     ];
 
+    var tra = [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+
+      0.0,
+      1.0,
+      0.0,
+      0.0,
+
+      0.0,
+      0.0,
+      1.0,
+      0.0,
+      
+      this.xFactor,
+      this.yFactor,
+      this.zFactor,
+      1.0,
+    ];
+
+    var rot = [
+      Math.cos(this.angle),
+      Math.sin(this.angle),
+      0.0,
+      0.0,
+
+      -Math.sin(this.angle),
+      Math.cos(this.angle),
+      0.0,
+      0.0,
+
+      0.0,
+      0.0,
+      1.0,
+      0.0,
+      
+      0.0,
+      0.0,
+      0.0,
+      1.0,
+
+    ];
+    
+    this.pushMatrix();
+
+    this.angle = 45 * Math.PI / 180;
+    this.xFactor = 1 * Math.cos(this.angle);
+    this.yFactor = 1 * Math.sin(this.angle);
+      
     this.multMatrix(sca);
+    this.multMatrix(tra);
+    this.multMatrix(rot);
 
-    // ---- BEGIN Primitive drawing section
-
-    // --- Diamond (square) ---
-    this.pushMatrix();
-    // TODO: position the diamond
-    // this.translate(x, y, 0);
-    // this.rotate(angle, 0, 0, 1);
-    if (this.displayDiamond) this.diamond.display();
+    this.setDiffuse(0,1,0,1);
+    this.diamond.display();    
     this.popMatrix();
 
-    // --- Parallelogram ---
+
     this.pushMatrix();
-    // TODO: position the parallelogram
-    // this.translate(x, y, 0);
-    // this.rotate(angle, 0, 0, 1);
-    if (this.displayParallelogram) this.parallelogram.display();
+
+    
+    this.rotate(135 * Math.PI / 180, 0, 0, 1);
+    this.rotate(180 * Math.PI / 180, 1, 0, 0);
+    this.translate(-3 , 1, 0);
+
+
+    this.setDiffuse(1,1,0,1);
+    this.parallelogram.display();
     this.popMatrix();
 
-    // --- Medium Triangle ---
+    // red triangle
     this.pushMatrix();
-    // TODO: position the medium triangle
-    // this.translate(x, y, 0);
-    // this.rotate(angle, 0, 0, 1);
-    if (this.displayTriangle) this.triangle.display();
+    this.angle = - 45 * Math.PI / 180;
+    
+    this.rotate(this.angle, 0, 0, 1);
+    this.translate(-1 ,0, 0);
+
+
+    this.setDiffuse(1,0,0,1);
+    this.triangleSmall.display();
     this.popMatrix();
 
-    // --- Big Triangle 1 ---
+    // pink triangle
     this.pushMatrix();
-    // TODO: position big triangle 1
-    // this.translate(x, y, 0);
-    // this.rotate(angle, 0, 0, 1);
-    if (this.displayTriangleBig1) this.triangleBig1.display();
+    this.angle = - 45 * Math.PI / 180;
+    
+    this.rotate(this.angle, 0, 0, 1);
+    this.translate(-1 ,0, 0);
+
+    
+    this.setDiffuse(1,0,0,1);
+    this.triangleSmall.display();
     this.popMatrix();
 
-    // --- Big Triangle 2 ---
-    this.pushMatrix();
-    // TODO: position big triangle 2
-    // this.translate(x, y, 0);
-    // this.rotate(angle, 0, 0, 1);
-    if (this.displayTriangleBig2) this.triangleBig2.display();
-    this.popMatrix();
 
-    // --- Small Triangle 1 ---
-    this.pushMatrix();
-    // TODO: position small triangle 1
-    // this.translate(x, y, 0);
-    // this.rotate(angle, 0, 0, 1);
-    if (this.displayTriangleSmall1) this.triangleSmall1.display();
-    this.popMatrix();
-
-    // --- Small Triangle 2 ---
-    this.pushMatrix();
-    // TODO: position small triangle 2
-    // this.translate(x, y, 0);
-    // this.rotate(angle, 0, 0, 1);
-    if (this.displayTriangleSmall2) this.triangleSmall2.display();
-    this.popMatrix();
-
+    
+  
     // ---- END Primitive drawing section
   }
 }
