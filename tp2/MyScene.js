@@ -154,18 +154,37 @@ export class MyScene extends CGFscene {
 
     // ---- BEGIN Primitive drawing section
     
-    // template de fazer a cena 
+    // green square (diamond)
     this.pushMatrix();
-    // this.translate(x, y, 0); //translate para a posição
-    this.rotate(angle, 0, 0, 1); //rotação para o ângulo desejado
-    this.diamond.display();
+
+    this.angle = 45 * Math.PI / 180;
+    this.xFactor = 1 * Math.cos(this.angle);
+    this.yFactor = 1 * Math.sin(this.angle);
+
+    this.multMatrix(tra);
+    this.multMatrix(rot);
+
+    this.setDiffuse(0,1,0,1);
+    this.diamond.display();    
     this.popMatrix();
+
+    // red triangle
+    this.pushMatrix();
+
+    this.popMatrix();
+
     
-    if (this.displayDiamond) this.diamond.display();
-    if (this.displayTriangle) this.triangle.display();
-    if (this.displayParallelogram) this.parallelogram.display();
-    this.triangleSmall.display();
-    this.triangleBig.display();
+
+
+    
+
+    
+    
+    // if (this.displayDiamond) this.diamond.display();
+    // if (this.displayTriangle) this.triangle.display();
+    // if (this.displayParallelogram) this.parallelogram.display();
+    // this.triangleSmall.display();
+    // this.triangleBig.display();
 
     // ---- END Primitive drawing section
   }
