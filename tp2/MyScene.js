@@ -187,10 +187,19 @@ export class MyScene extends CGFscene {
     this.angle = -45 * Math.PI / 180;
     this.rotate(this.angle, 0, 0, 1);
     this.translate(-1, 0, 0);
-    
+
+    this.setDiffuse(1,0,0,1);
     this.triangleSmall.display();
-    
-    this.setDiffuse(1,0,0,0);
+    this.popMatrix();
+
+    // pink triangle
+    this.pushMatrix();
+    this.angle = -135 * Math.PI /180;
+    this.translate(2 * Math.cos(this.angle), 0, 0);
+    this.rotate(this.angle, 0, 0, 1);
+
+    this.setDiffuse(1, 0.612, 0.824, 1);
+    this.triangle.display();
     this.popMatrix();
 
 
