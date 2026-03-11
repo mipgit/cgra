@@ -65,12 +65,17 @@ export class MyScene extends CGFscene {
     if (this.displayAxis) this.axis.display();
 
     this.setDefaultAppearance();
+
     this.pushMatrix();
-    this.translate(1, -1, -1);
+    this.translate(2.83, -2.83, -2.86);
+    this.scale(5.7,5.7,5.7)
     this.unitcube.display();
     this.popMatrix();
-
+    
+    this.pushMatrix();
+    this.translate(2.85, -1.4,0);
     this.tangram.display();
+    this.popMatrix();
     // ---- END Primitive drawing section
   }
 }
