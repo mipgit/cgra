@@ -4,7 +4,7 @@ import {CGFobject} from '../lib/CGF.js';
  * @constructor
  * @param scene - Reference to MyScene object
  */
-export class MyParallelogram extends CGFobject {
+export class MyUnitCube extends CGFobject {
 	constructor(scene) {
 		super(scene);
 		this.initBuffers();
@@ -12,27 +12,26 @@ export class MyParallelogram extends CGFobject {
 	
 	initBuffers() {
 		this.vertices = [
-			0, 0, 0,	//0 front
-			1, 1, 0,	//1 front
-			3, 1, 0,	//2 front
-			2, 0, 0, 	//3 front
-			0, 0, 0,	//4 back
-			1, 1, 0,	//5 back
-			3, 1, 0,	//6 back
-			2, 0, 0, 	//7 back
-		];
+			-1, -1, -1,	//0 back
+			-1, 1, -1,	//1 back
+			1, 1, -1,	//2 back
+			1, -1, -1,	//3 back
+			-1, -1, 1,	//4 front
+			-1, 1, 1,	//5 front
+			1, 1, 1,	//6 front
+			1, -1 , 1	//7 front
+		 ];
 
 		//Counter-clockwise reference of vertices
 		this.indices = [
-			0, 3, 1,
-			3, 2, 1, //front
-			4, 5, 7,
-			7, 5, 6, //back
-		];
+			0, 1, 2,	0, 2, 3,	// back face
+			7, 6, 5, 	7, 5, 4,	// front face
+			6, 2, 1,    6, 1, 5,    // upper face 
+		 	3, 7, 4,    3, 4, 0,    // lower face
+			3, 2, 6,	3, 6, 7,    // right face
+			4, 5, 1,    4, 1, 0,    // left face
 
-		this.normals = [
-			0, 0,  1,  0, 0,  1,  0, 0,  1,  0, 0,  1,  // front
-			0, 0, -1,  0, 0, -1,  0, 0, -1,  0, 0, -1,  // back
+			
 		];
 
 		//The defined indices (and corresponding vertices)

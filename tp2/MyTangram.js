@@ -18,7 +18,7 @@ export class MyTangram extends CGFobject {
     }
 
     display() {
-        // diamond (verde) - multiplicação de matrizes
+        // diamond (green) - matrix multiplication
         const angle = 45 * Math.PI / 180;
 
         var tra = [
@@ -42,7 +42,7 @@ export class MyTangram extends CGFobject {
         this.diamond.display();
         this.scene.popMatrix();
 
-        // parallelogram (amarelo)
+        // parallelogram (yellow)
         this.scene.pushMatrix();
 
 		this.scene.translate(2 * Math.cos(45 * Math.PI / 180), 2 * Math.sin(45 * Math.PI / 180), 0);
@@ -53,7 +53,7 @@ export class MyTangram extends CGFobject {
         this.parallelogram.display();
         this.scene.popMatrix();
 
-        // triângulo pequeno 1 (vermelho)
+        // small triangle 1 (red)
         this.scene.pushMatrix();
 
         this.scene.translate(-1 * Math.cos(-45 * Math.PI / 180), -1 * Math.sin(-45 * Math.PI / 180), 0);
@@ -63,7 +63,7 @@ export class MyTangram extends CGFobject {
         this.triangleSmall1.display();
         this.scene.popMatrix();
 
-        // triângulo pequeno 2 (roxo)
+        // small triangle 2 (purple)
         this.scene.pushMatrix();
 
         this.scene.translate(-3 * Math.cos(45 * Math.PI / 180), -1 * Math.sin(45 * Math.PI / 180), 0);
@@ -73,7 +73,7 @@ export class MyTangram extends CGFobject {
         this.triangleSmall2.display();
         this.scene.popMatrix();
 
-        // triângulo grande 1 (azul)
+        // large triangle 1 (blue)
         this.scene.pushMatrix();
 
         this.scene.translate(0, 2 * Math.sin(-45 * Math.PI / 180), 0);
@@ -83,7 +83,7 @@ export class MyTangram extends CGFobject {
         this.triangleBig1.display();
         this.scene.popMatrix();
 
-        // triângulo grande 2 (laranja)
+        // large triangle 2 (orange)
         this.scene.pushMatrix();
 
         this.scene.translate(0, -2 * Math.sin(135 * Math.PI / 180), 0);
@@ -93,7 +93,7 @@ export class MyTangram extends CGFobject {
         this.triangleBig2.display();
         this.scene.popMatrix();
 
-		// triângulo médio (roxo)
+		// medium triangle (purple)
 		this.scene.pushMatrix();
 		this.scene.translate(2* Math.cos(-135 * Math.PI / 180), 0, 0);
 		this.scene.rotate(-135 * Math.PI / 180, 0, 0, 1);
