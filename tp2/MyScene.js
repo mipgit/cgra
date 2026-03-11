@@ -1,10 +1,7 @@
 import { CGFscene, CGFcamera, CGFaxis } from "../lib/CGF.js";
-import { MyDiamond } from "./MyDiamond.js";
-import { MyTriangle } from "./MyTriangle.js";
-import { MyParallelogram } from "./MyParallelogram.js";
-import { MyTriangleSmall } from "./MyTriangleSmall.js";
-import { MyTriangleBig } from "./MyTriangleBig.js";
-
+import { MyTangram } from "./MyTangram.js";
+import { MyUnitCube } from "./MyUnitCube.js";
+import { MyUnitCubeQuad } from "./MyUnitCubeQuad.js";
 /**
  * MyScene
  * @constructor
@@ -15,7 +12,6 @@ export class MyScene extends CGFscene {
   }
   init(application) {
     super.init(application);
-    
     this.initCameras();
     this.initLights();
 
@@ -29,22 +25,14 @@ export class MyScene extends CGFscene {
 
     //Initialize scene objects
     this.axis = new CGFaxis(this);
-    this.diamond = new MyDiamond(this);
-    this.triangle = new MyTriangle(this);
-    this.parallelogram = new MyParallelogram(this);
-    this.triangleSmall = new MyTriangleSmall(this);
-    this.triangleBig = new MyTriangleBig(this);
+    this.tangram = new MyTangram(this);
+    this.unitcube = new MyUnitCube(this);
+    this.unitcubequad = new MyUnitCubeQuad(this);
 
     //Objects connected to MyInterface
+
     this.displayAxis = true;
     this.scaleFactor = 1;
-    this.xFactor = 0;
-    this.yFactor = 0;
-    this.zFactor = 0;
-    this.angle = 0;
-    this.displayDiamond = true;
-    this.displayTriangle = true;
-    this.displayParallelogram = true;
   }
   initLights() {
     this.lights[0].setPosition(15, 2, 5, 1);
@@ -69,154 +57,30 @@ export class MyScene extends CGFscene {
   }
   display() {
     // ---- BEGIN Background, camera and axis setup
-    // Clear image and depth buffer everytime we update the scene
     this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height);
     this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
-    // Initialize Model-View matrix as identity (no transformation
     this.updateProjectionMatrix();
     this.loadIdentity();
-    // Apply transformations corresponding to the camera position relative to the origin
     this.applyViewMatrix();
 
-    // Draw axis
     if (this.displayAxis) this.axis.display();
 
     this.setDefaultAppearance();
 
-    var sca = [
-      this.scaleFactor,
-      0.0,
-      0.0,
-      0.0,
-
-      0.0,
-      this.scaleFactor,
-      0.0,
-      0.0,
-
-      0.0,
-      0.0,
-      this.scaleFactor,
-      0.0,
-      
-      0.0,
-      0.0,
-      0.0,
-      1.0,
-    ];
-
-    var tra = [
-      1.0,
-      0.0,
-      0.0,
-      0.0,
-
-      0.0,
-      1.0,
-      0.0,
-      0.0,
-
-      0.0,
-      0.0,
-      1.0,
-      0.0,
-      
-      this.xFactor,
-      this.yFactor,
-      this.zFactor,
-      1.0,
-    ];
-
-    var rot = [
-      Math.cos(this.angle),
-      Math.sin(this.angle),
-      0.0,
-      0.0,
-
-      -Math.sin(this.angle),
-      Math.cos(this.angle),
-      0.0,
-      0.0,
-
-      0.0,
-      0.0,
-      1.0,
-      0.0,
-      
-      0.0,
-      0.0,
-      0.0,
-      1.0,
-
-    ];
-
-    this.multMatrix(sca);
-
-    // ---- BEGIN Primitive drawing section
-
-    // green diamond
     this.pushMatrix();
-
-    this.angle = 45 * Math.PI / 180;
-    this.xFactor = 1 * Math.cos(this.angle);
-    this.yFactor = 1 * Math.sin(this.angle);
-      
-    this.multMatrix(sca);
-    this.multMatrix(tra);
-    this.multMatrix(rot);
-
-    this.setDiffuse(0,1,0,1);
-    this.diamond.display();    
-    this.popMatrix();
-
-    // yellow paralelogram
-    
-    this.pushMatrix();
-
-    this.translate(4  * Math.cos(this.angle), -2 * Math.sin(this.angle), 0);
-    this.rotate(135 * Math.PI / 180, 0, 0, 1);
-    this.rotate(180 * Math.PI / 180, 1, 0, 0);
-
-    
-    this.setDiffuse(1,1,0,1);
-    this.parallelogram.display();
-    this.popMatrix();
-
-    // red triangle
-    this.pushMatrix();
-    this.angle = -45 * Math.PI / 180;
-    this.rotate(this.angle, 0, 0, 1);
-    this.translate(-1, 0, 0);
-
-    this.setDiffuse(1,0,0,1);
-    this.triangleSmall.display();
-    this.popMatrix();
-
-    // pink triangle
-    this.pushMatrix();
-    this.angle = -135 * Math.PI /180;
-    this.translate(2 * Math.cos(this.angle), 0, 0);
-    this.rotate(this.angle, 0, 0, 1);
-
-    this.setDiffuse(1, 0.612, 0.824, 1);
-    this.triangle.display();
+    this.translate(2.85, -1.4,0);
+    this.tangram.display();
     this.popMatrix();
 
 
+    this.pushMatrix();
+    this.translate(2.83, -2.83, -2.86);
+    this.scale(5.7,5.7,5.7)
+    this.unitcubequad.display();
+    this.popMatrix();
     
-  
-
-
-    
-
-    
-    
-    // if (this.displayDiamond) this.diamond.display();
-    // if (this.displayTriangle) this.triangle.display();
-    // if (this.displayParallelogram) this.parallelogram.display();
-    // this.triangleSmall.display();
-    // this.triangleBig.display();
-
     // ---- END Primitive drawing section
+
+
   }
 }

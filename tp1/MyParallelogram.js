@@ -1,8 +1,8 @@
 import {CGFobject} from '../lib/CGF.js';
 /**
- * MyDiamond
+ * MyParallelogram
  * @constructor
- * @param scene - Reference to MyScene object
+ * @param {CGFscene} scene - Reference to MyScene object
  */
 export class MyParallelogram extends CGFobject {
 	constructor(scene) {
@@ -13,18 +13,25 @@ export class MyParallelogram extends CGFobject {
 	initBuffers() {
 		this.vertices = [
 			0, 0, 0,	//0
-			1, 1, 0,	//1
-			3, 1, 0,	//2
-			2, 0, 0, 	//3
+			2, 0, 0,	//1
+			1, 1, 0,    //2
+			3, 1, 0     //3
 		];
 
-		//Counter-clockwise reference of vertices
+		// Front face (CCW) + back face (CW reversed) for double-sided rendering
 		this.indices = [
-			0, 3, 1,
-			3, 2, 1, //lado 1
-			0, 1, 3,
-			3, 1, 2, //lado 2
+			0, 1, 2,	// front
+			1, 3, 2,	// front
+			2, 1, 0,	// back
+			3, 1, 2		// back
+		];
 
+		// One normal per vertex, pointing towards the viewer (+Z)
+		this.normals = [
+			0, 0, 1,	//0
+			0, 0, 1,	//1
+			0, 0, 1,	//2
+			0, 0, 1		//3
 		];
 
 		//The defined indices (and corresponding vertices)
