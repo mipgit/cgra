@@ -17,6 +17,8 @@ export class MyInterface extends CGFinterface {
         // https://github.com/dataarts/dat.gui/blob/master/API.md
         this.gui = new dat.GUI();
 
+        this.gui.add(this.scene, 'globalAmbientIntensity', 0.0, 1.0).name('Global Ambient').onChange(this.scene.updateGlobalAmbient.bind(this.scene));
+
         this.gui.add(this.scene, 'displayAxis').name("Display axis");
         this.gui.add(this.scene, 'displayNormals').name("Display normals");
 
