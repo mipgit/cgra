@@ -29,10 +29,11 @@ export class MyTangram extends CGFobject {
         // Materials per piece - high specular, color matching tangram
         // diamond (green)
         this.matDiamond = new CGFappearance(scene);
-        this.matDiamond.setAmbient(0.0, 0.3, 0.0, 1.0);
-        this.matDiamond.setDiffuse(0.0, 0.8, 0.0, 1.0);
-        this.matDiamond.setSpecular(0.9, 0.9, 0.9, 1.0);
-        this.matDiamond.setShininess(80.0);
+        this.matDiamond.setAmbient(0.1, 0.1, 0.1, 1);
+        this.matDiamond.setDiffuse(0.9, 0.9, 0.9, 1);
+        this.matDiamond.setSpecular(0.1, 0.1, 0.1, 1);
+        this.matDiamond.setShininess(10.0);
+        this.matDiamond.loadTexture('images/tangram.png');
         
         // parallelogram (yellow)
         this.matParallelogram = new CGFappearance(scene);
@@ -108,7 +109,7 @@ export class MyTangram extends CGFobject {
         this.scene.pushMatrix();
         this.scene.multMatrix(tra);
         this.scene.multMatrix(rot);
-        this.scene.customMaterial.apply();
+        this.matDiamond.apply();
         this.diamond.display();
         this.scene.popMatrix();
 
