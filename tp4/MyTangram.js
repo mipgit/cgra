@@ -26,6 +26,61 @@ export class MyTangram extends CGFobject {
             this.triangleBig2,
         ];
 
+        // Red triangle
+        this.triangleSmall1.updateTexCoords([
+            0.25, 0.75,
+            0.75, 0.75,
+            0.5, 0.5,
+            // back face
+            0.25, 0.75,
+            0.75, 0.75,
+            0.5, 0.5
+        ]);
+
+        // Purple small triangle
+        this.triangleSmall2.updateTexCoords([
+            0, 0,
+            0, 0.5,
+            0.25, 0.25,
+            // back face
+            0, 0,
+            0, 0.5,
+            0.25, 0.25
+        ]);
+
+        // Blue large triangle
+        this.triangleBig1.updateTexCoords([
+            1, 0,
+            0, 0,
+            0.5, 0.5,
+            // back face
+            1, 0,
+            0, 0,
+            0.5, 0.5
+        ]);
+
+        // Orange large triangle
+        this.triangleBig2.updateTexCoords([
+            1, 1,
+            1, 0,
+            0.5, 0.5,
+            // back face
+            1, 1,
+            1, 0,
+            0.5, 0.5
+        ]);
+
+        // Pink medium triangle
+        this.triangle.updateTexCoords([
+            0, 0.5,
+            0, 1,
+            0.5, 1,
+            // back face
+            0, 0.5,
+            0, 1,
+            0.5, 1
+        ]);
+
         // Materials per piece - high specular, color matching tangram
         // diamond (green)
         this.matDiamond = new CGFappearance(scene);
@@ -41,6 +96,7 @@ export class MyTangram extends CGFobject {
         this.matParallelogram.setDiffuse(0.9, 0.9, 0.0, 1.0);
         this.matParallelogram.setSpecular(0.9, 0.9, 0.9, 1.0);
         this.matParallelogram.setShininess(80.0);
+        this.matParallelogram.loadTexture('images/tangram.png');
 
         // small triangle 1 (red)
         this.matTriangleSmall1 = new CGFappearance(scene);
@@ -48,6 +104,7 @@ export class MyTangram extends CGFobject {
         this.matTriangleSmall1.setDiffuse(0.9, 0.0, 0.0, 1.0);
         this.matTriangleSmall1.setSpecular(0.9, 0.9, 0.9, 1.0);
         this.matTriangleSmall1.setShininess(80.0);
+        this.matTriangleSmall1.loadTexture('images/tangram.png');
 
         // small triangle 2 (purple)
         this.matTriangleSmall2 = new CGFappearance(scene);
@@ -55,6 +112,7 @@ export class MyTangram extends CGFobject {
         this.matTriangleSmall2.setDiffuse(0.7, 0.4, 1.0, 1.0);
         this.matTriangleSmall2.setSpecular(0.9, 0.9, 0.9, 1.0);
         this.matTriangleSmall2.setShininess(80.0);
+        this.matTriangleSmall1.loadTexture('images/tangram.png');
 
         // large triangle 1 (blue)
         this.matTriangleBig1 = new CGFappearance(scene);
@@ -62,6 +120,8 @@ export class MyTangram extends CGFobject {
         this.matTriangleBig1.setDiffuse(0.0, 0.0, 0.9, 1.0);
         this.matTriangleBig1.setSpecular(0.9, 0.9, 0.9, 1.0);
         this.matTriangleBig1.setShininess(80.0);
+        this.matTriangleBig1.loadTexture('images/tangram.png');
+
 
         // large triangle 2 (orange)
         this.matTriangleBig2 = new CGFappearance(scene);
@@ -69,6 +129,8 @@ export class MyTangram extends CGFobject {
         this.matTriangleBig2.setDiffuse(1.0, 0.5, 0.0, 1.0);
         this.matTriangleBig2.setSpecular(0.9, 0.9, 0.9, 1.0);
         this.matTriangleBig2.setShininess(80.0);
+        this.matTriangleBig1.loadTexture('images/tangram.png');
+
 
         // medium triangle (purple)
         this.matTriangle = new CGFappearance(scene);
@@ -76,6 +138,7 @@ export class MyTangram extends CGFobject {
         this.matTriangle.setDiffuse(0.9, 0.5, 0.5, 1.0);
         this.matTriangle.setSpecular(0.9, 0.9, 0.9, 1.0);
         this.matTriangle.setShininess(80.0);
+        this.matTriangle.loadTexture('images/tangram.png');
     }
 
     enableNormalViz() {

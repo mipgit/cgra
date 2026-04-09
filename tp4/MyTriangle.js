@@ -45,5 +45,10 @@ export class MyTriangle extends CGFobject {
 
 		this.initGLBuffers();
 	}
+
+	updateTexCoords(coords) {
+		this.texCoords = [...coords];
+		this.updateTexCoordsGLBuffers();
+	}
 }
 
