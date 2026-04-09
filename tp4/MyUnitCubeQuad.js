@@ -20,15 +20,21 @@ export class MyUnitCubeQuad extends CGFobject {
         // front
         this.scene.pushMatrix();
         this.scene.translate(0,0, 0.5);
-        if (this.front) this.front.bind();
-        this.quad.display();
+        if (this.front) {
+            this.front.bind();
+            this.scene.gl.texParameteri(this.scene.gl.TEXTURE_2D, this.scene.gl.TEXTURE_MAG_FILTER, this.scene.gl.NEAREST);
+        }
+            this.quad.display();
         this.scene.popMatrix();
 
         // right
         this.scene.pushMatrix();
         this.scene.translate(-0.5,0,0);
         this.scene.rotate(90 * Math.PI / 180, 0, 1, 0);
-        if (this.right) this.right.bind();
+        if (this.right) {
+            this.right.bind();
+            this.scene.gl.texParameteri(this.scene.gl.TEXTURE_2D, this.scene.gl.TEXTURE_MAG_FILTER, this.scene.gl.NEAREST);
+        }
         this.quad.display();
         this.scene.popMatrix();
 
@@ -36,14 +42,20 @@ export class MyUnitCubeQuad extends CGFobject {
         this.scene.pushMatrix();
         this.scene.translate(0.5,0,0);
         this.scene.rotate(-90 * Math.PI / 180, 0, 1, 0);
-        if (this.back) this.back.bind();
+        if (this.back) {
+            this.back.bind();
+            this.scene.gl.texParameteri(this.scene.gl.TEXTURE_2D, this.scene.gl.TEXTURE_MAG_FILTER, this.scene.gl.NEAREST);
+        }
         this.quad.display();
         this.scene.popMatrix();
 
         // left
         this.scene.pushMatrix();
         this.scene.translate(0,0, -0.5);
-        if (this.left) this.left.bind();
+        if (this.left) {
+            this.left.bind();
+            this.scene.gl.texParameteri(this.scene.gl.TEXTURE_2D, this.scene.gl.TEXTURE_MAG_FILTER, this.scene.gl.NEAREST);
+        }
         this.quad.display();
         this.scene.popMatrix();
         
@@ -59,7 +71,11 @@ export class MyUnitCubeQuad extends CGFobject {
         this.scene.pushMatrix();
         this.scene.translate(0,-0.5,0);
         this.scene.rotate(90 * Math.PI / 180, 1, 0, 0);
-        if (this.bottom) this.bottom.bind();
+        if (this.bottom) {
+            this.bottom.bind();
+            this.scene.gl.texParameteri(this.scene.gl.TEXTURE_2D, this.scene.gl.TEXTURE_MAG_FILTER, this.scene.gl.NEAREST);
+        }
+        
         this.quad.display();
         this.scene.popMatrix();
 

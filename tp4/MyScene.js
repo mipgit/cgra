@@ -31,6 +31,8 @@ export class MyScene extends CGFscene {
         this.mineSide = new CGFtexture(this, 'images/mineSide.png'),  
         this.mineBottom = new CGFtexture(this, 'images/mineBottom.png')
 
+        
+
         //Initialize scene objects
         this.axis = new CGFaxis(this);
         this.quad = new MyQuad(this);
@@ -133,8 +135,8 @@ export class MyScene extends CGFscene {
         // Uncomment next line for NEAREST when magnifying, or 
         // add a checkbox in the GUI to alternate in real time
         
-        // this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, this.gl.NEAREST);
-
+        this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, this.gl.NEAREST);
+        
         this.quad.display();
 
         if (this.displayTangram)
