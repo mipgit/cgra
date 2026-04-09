@@ -26,11 +26,16 @@ export class MyScene extends CGFscene {
         this.gl.depthFunc(this.gl.LEQUAL);
         this.enableTextures(true);
 
+        // Minecraft textures
+        this.mineTop = new CGFtexture(this, 'images/mineTop.png'), 
+        this.mineSide = new CGFtexture(this, 'images/mineSide.png'),  
+        this.mineBottom = new CGFtexture(this, 'images/mineBottom.png')
+
         //Initialize scene objects
         this.axis = new CGFaxis(this);
         this.quad = new MyQuad(this);
         this.tangram = new MyTangram(this);
-        this.unitCubeQuad = new MyUnitCubeQuad(this);
+        this.unitCubeQuad = new MyUnitCubeQuad(this, this.mineTop, this.mineSide, this.mineSide, this.mineSide, this.mineSide, this.mineBottom);
 
         //------ Applied Material
         this.quadMaterial = new CGFappearance(this);
