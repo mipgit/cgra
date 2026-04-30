@@ -19,6 +19,11 @@ export class MyInterface extends CGFinterface {
 
         //Checkbox element in GUI
         this.gui.add(this.scene, 'displayAxis').name('Display Axis');
+        
+        // Dropdown for sky texture selection
+        this.gui.add(this.scene, 'selectedTexture', ['basic', 'farm_road', 'full_clouds', 'just_blue'])
+              .name('Sky Texture')
+              .onChange(() => this.scene.updateTexture());
       
 
         return true;

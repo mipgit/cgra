@@ -1,4 +1,6 @@
-import { CGFscene, CGFcamera, CGFaxis } from "../lib/CGF.js";
+import { CGFscene, CGFcamera, CGFaxis, CGFappearance, CGFtexture } from "../lib/CGF.js";
+import { MySphere } from "./MySphere.js";
+import { MyPlane } from "./MyPlane.js";
 
 /**
  * MyScene
@@ -22,16 +24,71 @@ export class MyScene extends CGFscene {
     this.gl.enable(this.gl.CULL_FACE);
     this.gl.depthFunc(this.gl.LEQUAL);
 
+    //Enable textures
+    this.enableTextures(true);
+
     //Initialize scene objects
     this.axis = new CGFaxis(this);
+
+    // Sky sphere with texture on inside
+    this.sphere = new MySphere(this, 50, 50);
+    
+    // Load all sky textures
+    this.textures = {
+      'basic': new CGFtexture(this, "textures/basic.jpg"),
+      'farm_road': new CGFtexture(this, "textures/farm_road.jpg"),
+      'full_clouds': new CGFtexture(this, "textures/full_clouds.jpg"),
+      'just_blue': new CGFtexture(this, "textures/just_blue.jpg")
+    };
+    
+    // Sky appearance with texture - using TP5 style settings
+    this.skyAppearance = new CGFappearance(this);
+    this.skyAppearance.setAmbient(0.3, 0.3, 0.3, 1);
+    this.skyAppearance.setDiffuse(0.7, 0.7, 0.7, 1);
+    this.skyAppearance.setSpecular(0, 0, 0, 1);
+    this.skyAppearance.setEmission(0, 0, 0, 1);
+    this.skyAppearance.setShininess(120);
+    this.selectedTexture = 'sky';
+    this.skyAppearance.setTexture(this.textures[this.selectedTexture]);
+    this.skyAppearance.setTextureWrap('REPEAT', 'REPEAT');
+
+    // Floor with dirt path in center and grass on sides
+    this.grassLeft = new MyPlane(this, 50);
+    this.dirtPath = new MyPlane(this, 50);
+    this.grassRight = new MyPlane(this, 50);
+    
+    // Grass appearance
+    this.grassAppearance = new CGFappearance(this);
+    this.grassAppearance.setAmbient(0.3, 0.3, 0.3, 1);
+    this.grassAppearance.setDiffuse(0.7, 0.7, 0.7, 1);
+    this.grassAppearance.setSpecular(0, 0, 0, 1);
+    this.grassAppearance.setEmission(0, 0, 0, 1);
+    this.grassAppearance.setShininess(10);
+    this.grassTexture = new CGFtexture(this, "textures/grass.jpg");
+    this.grassAppearance.setTexture(this.grassTexture);
+    this.grassAppearance.setTextureWrap('REPEAT', 'REPEAT');
+    
+    // Dirt appearance
+    this.dirtAppearance = new CGFappearance(this);
+    this.dirtAppearance.setAmbient(0.3, 0.3, 0.3, 1);
+    this.dirtAppearance.setDiffuse(0.7, 0.7, 0.7, 1);
+    this.dirtAppearance.setSpecular(0, 0, 0, 1);
+    this.dirtAppearance.setEmission(0, 0, 0, 1);
+    this.dirtAppearance.setShininess(10);
+    this.dirtTexture = new CGFtexture(this, "textures/dirt.jpg");
+    this.dirtAppearance.setTexture(this.dirtTexture);
+    this.dirtAppearance.setTextureWrap('REPEAT', 'REPEAT');
 
     //Objects connected to MyInterface
     this.displayAxis = true;
   }
 
   initLights() {
-    this.lights[0].setPosition(15, 2, 5, 1);
+    // Light at center (0,0,0) - point light since w=1
+    this.lights[0].setPosition(0, 0, 0, 1);
+    this.lights[0].setAmbient(0.5, 0.5, 0.5, 1.0);
     this.lights[0].setDiffuse(1.0, 1.0, 1.0, 1.0);
+    this.lights[0].setSpecular(1.0, 1.0, 1.0, 1.0);
     this.lights[0].enable();
     this.lights[0].update();
   }
@@ -41,8 +98,8 @@ export class MyScene extends CGFscene {
       0.4,
       0.1,
       500,
-      vec3.fromValues(15, 15, 15),
-      vec3.fromValues(0, 0, 0)
+      vec3.fromValues(0, 0.5, 10),   // Camera at center x=0, z=10, slightly elevated
+      vec3.fromValues(0, 0.5, 0)     // Looking at center
     );
   }
 
@@ -51,6 +108,10 @@ export class MyScene extends CGFscene {
     this.setDiffuse(0.2, 0.4, 0.8, 1.0);
     this.setSpecular(0.2, 0.4, 0.8, 1.0);
     this.setShininess(10.0);
+  }
+
+  updateTexture() {
+    this.skyAppearance.setTexture(this.textures[this.selectedTexture]);
   }
 
   display() {
@@ -64,15 +125,58 @@ export class MyScene extends CGFscene {
     // Apply transformations corresponding to the camera position relative to the origin
     this.applyViewMatrix();
 
+    // Update lights
+    this.lights[0].update();
+
     // Draw axis
     if (this.displayAxis) this.axis.display();
-
-    this.setDefaultAppearance();
 
     
     // ---- BEGIN Primitive drawing section
 
+    // Sky sphere — centered at 0,0,0 with scale 20
+    this.pushMatrix();
+    this.scale(20, 20, 20);
+    // Disable culling to see both sides
+    this.gl.disable(this.gl.CULL_FACE);
+    this.skyAppearance.apply();
+    this.sphere.display();
+    // Re-enable culling
+    this.gl.enable(this.gl.CULL_FACE);
+    this.popMatrix();
+
+    // Floor - grass on sides, dirt path in center
+    // Total width 30: grass(10.5) + dirt(9) + grass(10.5)
+    this.pushMatrix();
+    this.rotate(-Math.PI / 2, 1, 0, 0);  // Make horizontal (X-Z plane)
+    this.translate(0, 0, -0.5);  // Position below camera at y=-0.5
     
+    // Left grass strip (35% of width = 10.5 units)
+    this.pushMatrix();
+    this.translate(-9.75, 0, 0);  // Position on left
+    this.scale(10.5, 100, 1);  // Width 10.5, length 100 (long path)
+    this.grassAppearance.apply();
+    this.grassLeft.display();
+    this.popMatrix();
+    
+    // Center dirt path (30% of width = 9 units)
+    this.pushMatrix();
+    this.translate(0, 0, 0);  // Center
+    this.scale(9, 100, 1);  // Width 9, length 100
+    this.dirtAppearance.apply();
+    this.dirtPath.display();
+    this.popMatrix();
+    
+    // Right grass strip (35% of width = 10.5 units)
+    this.pushMatrix();
+    this.translate(9.75, 0, 0);  // Position on right
+    this.scale(10.5, 100, 1);  // Width 10.5, length 100
+    this.grassAppearance.apply();
+    this.grassRight.display();
+    this.popMatrix();
+    
+    this.popMatrix();
+
     // ---- END Primitive drawing section
   }
 }
