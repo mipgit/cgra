@@ -1,4 +1,4 @@
-import { CGFscene, CGFcamera, CGFaxis, CGFappearance, CGFtexture } from "../lib/CGF.js";
+import { CGFscene, CGFcamera, CGFaxis, CGFappearance, CGFtexture, CGFshader } from "../lib/CGF.js";
 import { MySphere } from "./MySphere.js";
 import { MyPlane } from "./MyPlane.js";
 
@@ -41,6 +41,8 @@ export class MyScene extends CGFscene {
       'just_blue': new CGFtexture(this, "textures/just_blue.jpg")
     };
     
+    this.skyShader = new CGFshader(this.gl, "shaders/skyglow.vert", "shaders/skyglow.frag");
+
     // Sky appearance with texture - using TP5 style settings
     this.skyAppearance = new CGFappearance(this);
     this.skyAppearance.setAmbient(0.3, 0.3, 0.3, 1);
@@ -48,9 +50,21 @@ export class MyScene extends CGFscene {
     this.skyAppearance.setSpecular(0, 0, 0, 1);
     this.skyAppearance.setEmission(0, 0, 0, 1);
     this.skyAppearance.setShininess(120);
-    this.selectedTexture = 'sky';
+    this.selectedTexture = 'just_blue';
     this.skyAppearance.setTexture(this.textures[this.selectedTexture]);
     this.skyAppearance.setTextureWrap('REPEAT', 'REPEAT');
+
+    // Sun
+    this.sunAppearance = new CGFappearance(this);
+    this.sunAppearance.setEmission(1.0, 0.9, 0.6, 1.0); 
+    this.sunAppearance.setDiffuse(0, 0, 0, 1);
+    this.sunAppearance.setAmbient(0, 0, 0, 1);
+    this.sunAppearance.setSpecular(0, 0, 0, 1);
+
+    // coordinates for the just_blue
+    this.sunU = 4919 / 8192;
+    this.sunV = 1387 / 4096;
+
 
     // Floor with dirt path in center and grass on sides
     this.grassLeft = new MyPlane(this, 50);
@@ -84,11 +98,14 @@ export class MyScene extends CGFscene {
   }
 
   initLights() {
-    // Light at center (0,0,0) - point light since w=1
+    // Sun light
     this.lights[0].setPosition(0, 0, 0, 1);
-    this.lights[0].setAmbient(0.5, 0.5, 0.5, 1.0);
-    this.lights[0].setDiffuse(1.0, 1.0, 1.0, 1.0);
-    this.lights[0].setSpecular(1.0, 1.0, 1.0, 1.0);
+    this.lights[0].setAmbient(0.05, 0.05, 0.05, 1.0);
+    this.lights[0].setDiffuse(1.0, 1.0, 0.95, 1.0);
+    this.lights[0].setSpecular(1.0, 1.0, 0.95, 1.0);
+    this.lights[0].setConstantAttenuation(1.0);
+    this.lights[0].setLinearAttenuation(0.0);
+    this.lights[0].setQuadraticAttenuation(0.0);
     this.lights[0].enable();
     this.lights[0].update();
   }
@@ -111,7 +128,7 @@ export class MyScene extends CGFscene {
   }
 
   updateTexture() {
-    this.skyAppearance.setTexture(this.textures[this.selectedTexture]);
+    this.skyAppearance.setTexture('this.textures[this.selectedTexture]');
   }
 
   display() {
@@ -125,7 +142,22 @@ export class MyScene extends CGFscene {
     // Apply transformations corresponding to the camera position relative to the origin
     this.applyViewMatrix();
 
-    // Update lights
+    // sun calculations 
+    let theta = this.sunU * 2 * Math.PI;
+    let phi = this.sunV * Math.PI;
+
+    // slightly less then skybox scale (20)
+    let distance = 39.0;
+
+    let sunX = distance * Math.sin(phi) * Math.cos(theta);
+    let sunY = distance * Math.cos(phi);
+    let sunZ = distance * Math.sin(phi) * Math.sin(theta);
+
+    let sunDir = vec3.fromValues(sunX, sunY, sunZ);
+    vec3.normalize(sunDir, sunDir);
+
+    // sun light
+    this.lights[0].setPosition(sunX, sunY, sunZ, 1);
     this.lights[0].update();
 
     // Draw axis
@@ -135,8 +167,14 @@ export class MyScene extends CGFscene {
     // ---- BEGIN Primitive drawing section
 
     // Sky sphere — centered at 0,0,0 with scale 20
+    // shader for sun
+    this.setActiveShader(this.skyShader);
+    this.skyShader.setUniformsValues({
+      uSunDir: [sunDir[0], sunDir[1], sunDir[2]]
+    });
+
     this.pushMatrix();
-    this.scale(20, 20, 20);
+    this.scale(40, 40, 40);
     // Disable culling to see both sides
     this.gl.disable(this.gl.CULL_FACE);
     this.skyAppearance.apply();
@@ -144,6 +182,9 @@ export class MyScene extends CGFscene {
     // Re-enable culling
     this.gl.enable(this.gl.CULL_FACE);
     this.popMatrix();
+
+    this.setActiveShader(this.defaultShader);
+
 
     // Floor - grass on sides, dirt path in center
     // Total width 30: grass(10.5) + dirt(9) + grass(10.5)
