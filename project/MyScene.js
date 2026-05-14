@@ -1,6 +1,7 @@
 import { CGFscene, CGFcamera, CGFaxis, CGFappearance, CGFtexture, CGFshader } from "../lib/CGF.js";
 import { MySphere } from "./MySphere.js";
 import { MyPlane } from "./MyPlane.js";
+import { MyGrass } from "./MyGrass.js";
 
 /**
  * MyScene
@@ -66,32 +67,22 @@ export class MyScene extends CGFscene {
     this.sunV = 1387 / 4096;
 
 
-    // Floor with dirt path in center and grass on sides
-    this.grassLeft = new MyPlane(this, 50);
-    this.dirtPath = new MyPlane(this, 50);
-    this.grassRight = new MyPlane(this, 50);
-    
-    // Grass appearance
-    this.grassAppearance = new CGFappearance(this);
-    this.grassAppearance.setAmbient(0.3, 0.3, 0.3, 1);
-    this.grassAppearance.setDiffuse(0.7, 0.7, 0.7, 1);
-    this.grassAppearance.setSpecular(0, 0, 0, 1);
-    this.grassAppearance.setEmission(0, 0, 0, 1);
-    this.grassAppearance.setShininess(10);
-    this.grassTexture = new CGFtexture(this, "textures/grass.jpg");
-    this.grassAppearance.setTexture(this.grassTexture);
-    this.grassAppearance.setTextureWrap('REPEAT', 'REPEAT');
-    
-    // Dirt appearance
-    this.dirtAppearance = new CGFappearance(this);
-    this.dirtAppearance.setAmbient(0.3, 0.3, 0.3, 1);
-    this.dirtAppearance.setDiffuse(0.7, 0.7, 0.7, 1);
-    this.dirtAppearance.setSpecular(0, 0, 0, 1);
-    this.dirtAppearance.setEmission(0, 0, 0, 1);
-    this.dirtAppearance.setShininess(10);
-    this.dirtTexture = new CGFtexture(this, "textures/dirt.jpg");
-    this.dirtAppearance.setTexture(this.dirtTexture);
-    this.dirtAppearance.setTextureWrap('REPEAT', 'REPEAT');
+    this.floor = new MyPlane(this, 10);
+
+    this.grass = new MyGrass(this);
+    this.pinkGrassAppearance = new CGFappearance(this);
+    this.pinkGrassAppearance.setAmbient(0.9, 0.4, 0.6, 1);
+    this.pinkGrassAppearance.setDiffuse(1.0, 0.5, 0.7, 1);
+    this.pinkGrassAppearance.setSpecular(0, 0, 0, 1);
+    this.pinkGrassAppearance.setEmission(0, 0, 0, 1);
+    this.pinkGrassAppearance.setShininess(5);
+
+    this.floorAppearance = new CGFappearance(this);
+    this.floorAppearance.setAmbient(0.2, 0.6, 0.2, 1);
+    this.floorAppearance.setDiffuse(0.3, 0.7, 0.3, 1);
+    this.floorAppearance.setSpecular(0, 0, 0, 1);
+    this.floorAppearance.setEmission(0, 0, 0, 1);
+    this.floorAppearance.setShininess(5);
 
     //Objects connected to MyInterface
     this.displayAxis = true;
@@ -186,36 +177,19 @@ export class MyScene extends CGFscene {
     this.setActiveShader(this.defaultShader);
 
 
-    // Floor - grass on sides, dirt path in center
-    // Total width 30: grass(10.5) + dirt(9) + grass(10.5)
     this.pushMatrix();
-    this.rotate(-Math.PI / 2, 1, 0, 0);  // Make horizontal (X-Z plane)
-    this.translate(0, 0, -0.5);  // Position below camera at y=-0.5
-    
-    // Left grass strip (35% of width = 10.5 units)
-    this.pushMatrix();
-    this.translate(-9.75, 0, 0);  // Position on left
-    this.scale(10.5, 100, 1);  // Width 10.5, length 100 (long path)
-    this.grassAppearance.apply();
-    this.grassLeft.display();
+    this.rotate(-Math.PI / 2, 1, 0, 0);
+    this.translate(0, 0, -0.5);
+    this.scale(80, 80, 1);
+    this.floorAppearance.apply();
+    this.floor.display();
     this.popMatrix();
-    
-    // Center dirt path (30% of width = 9 units)
+
+    // Pink grass piece sitting on the floor
     this.pushMatrix();
-    this.translate(0, 0, 0);  // Center
-    this.scale(9, 100, 1);  // Width 9, length 100
-    this.dirtAppearance.apply();
-    this.dirtPath.display();
-    this.popMatrix();
-    
-    // Right grass strip (35% of width = 10.5 units)
-    this.pushMatrix();
-    this.translate(9.75, 0, 0);  // Position on right
-    this.scale(10.5, 100, 1);  // Width 10.5, length 100
-    this.grassAppearance.apply();
-    this.grassRight.display();
-    this.popMatrix();
-    
+    this.translate(0, -0.5, 0);
+    this.pinkGrassAppearance.apply();
+    this.grass.display();
     this.popMatrix();
 
     // ---- END Primitive drawing section
