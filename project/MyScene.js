@@ -70,6 +70,18 @@ export class MyScene extends CGFscene {
     this.terrainShader.setUniformsValues({ uSampler2: 1 });
     this.terrainShader.setUniformsValues({ uHeightScale: 7.0 });
     this.terrainShader.setUniformsValues({ uTexelSize: [1.0 / 1024.0, 1.0 / 1024.0] });
+    
+    // Dirt path 
+    this.pathWidth = 0.06;
+    this.pathWaveAmplitude = 0.12;
+    this.pathWaveFrequency = 4.0;
+    this.dirtColor = [0.45, 0.38, 0.24]; 
+    this.terrainShader.setUniformsValues({
+      uDirtColor: this.dirtColor,
+      uPathWidth: this.pathWidth,
+      uPathWaveAmplitude: this.pathWaveAmplitude,
+      uPathWaveFrequency: this.pathWaveFrequency
+    });
 
     // terrain appearance
     this.terrainAppearance = new CGFappearance(this);
