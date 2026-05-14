@@ -29,9 +29,8 @@ export class MyScene extends CGFscene {
 
     //Initialize scene objects
     this.axis = new CGFaxis(this);
-
-    // Sky sphere with texture on inside
     this.sphere = new MySphere(this, 50, 50);
+    this.terrain = new MyPlane(this, 100);
     
     // Load all sky textures
     this.textures = {
@@ -42,13 +41,6 @@ export class MyScene extends CGFscene {
     };
     
     this.skyShader = new CGFshader(this.gl, "shaders/skyglow.vert", "shaders/skyglow.frag");
-
-    this.terrainShader = new CGFshader(this.gl, "shaders/terrain.vert", "shaders/terrain.frag");
-    this.heightmapTexture = new CGFtexture(this, "textures/heightmap.png");
-    this.terrainShader.setUniformsValues({ uSampler2: 1 });
-    this.terrainShader.setUniformsValues({ uHeightScale: 6.0 });
-    this.terrainShader.setUniformsValues({ uTexelSize: [1.0 / 1024.0, 1.0 / 1024.0] });
-
 
     // Sky appearance with texture - using TP5 style settings
     this.skyAppearance = new CGFappearance(this);
@@ -72,35 +64,23 @@ export class MyScene extends CGFscene {
     this.sunU = 4919 / 8192;
     this.sunV = 1387 / 4096;
 
+    // terrain shaders
+    this.terrainShader = new CGFshader(this.gl, "shaders/terrain.vert", "shaders/terrain.frag");
+    this.heightmapTexture = new CGFtexture(this, "textures/heightmap.png");
+    this.terrainShader.setUniformsValues({ uSampler2: 1 });
+    this.terrainShader.setUniformsValues({ uHeightScale: 7.0 });
+    this.terrainShader.setUniformsValues({ uTexelSize: [1.0 / 1024.0, 1.0 / 1024.0] });
 
-    // Floor with dirt path in center and grass on sides
-    this.grassLeft = new MyPlane(this, 50);
-    this.dirtPath = new MyPlane(this, 50);
-    this.grassRight = new MyPlane(this, 50);
-
-    this.terrain = new MyPlane(this, 100);
-    
-    // Grass appearance
-    this.grassAppearance = new CGFappearance(this);
-    this.grassAppearance.setAmbient(0.3, 0.3, 0.3, 1);
-    this.grassAppearance.setDiffuse(1.0, 1.0, 1.0, 1.0);
-    this.grassAppearance.setSpecular(0, 0, 0, 1);
-    this.grassAppearance.setEmission(0, 0, 0, 1);
-    this.grassAppearance.setShininess(10);
-    this.grassTexture = new CGFtexture(this, "textures/grass2.jpg");
-    this.grassAppearance.setTexture(this.grassTexture);
-    this.grassAppearance.setTextureWrap('REPEAT', 'REPEAT');
-    
-    // Dirt appearance
-    this.dirtAppearance = new CGFappearance(this);
-    this.dirtAppearance.setAmbient(0.3, 0.3, 0.3, 1);
-    this.dirtAppearance.setDiffuse(0.7, 0.7, 0.7, 1);
-    this.dirtAppearance.setSpecular(0, 0, 0, 1);
-    this.dirtAppearance.setEmission(0, 0, 0, 1);
-    this.dirtAppearance.setShininess(10);
-    this.dirtTexture = new CGFtexture(this, "textures/dirt.jpg");
-    this.dirtAppearance.setTexture(this.dirtTexture);
-    this.dirtAppearance.setTextureWrap('REPEAT', 'REPEAT');
+    // terrain appearance
+    this.terrainAppearance = new CGFappearance(this);
+    this.terrainAppearance.setAmbient(0.3, 0.3, 0.3, 1);
+    this.terrainAppearance.setDiffuse(1.0, 1.0, 1.0, 1.0);
+    this.terrainAppearance.setSpecular(0, 0, 0, 1);
+    this.terrainAppearance.setEmission(0, 0, 0, 1);
+    this.terrainAppearance.setShininess(10);
+    this.terrainTexture = new CGFtexture(this, "textures/just_green.jpeg");
+    this.terrainAppearance.setTexture(this.terrainTexture);
+    this.terrainAppearance.setTextureWrap('REPEAT', 'REPEAT');
 
     //Objects connected to MyInterface
     this.displayAxis = true;
@@ -196,8 +176,7 @@ export class MyScene extends CGFscene {
     this.setActiveShader(this.defaultShader);
 
 
-    // Floor - grass on sides, dirt path in center
-    // Total width 30: grass(10.5) + dirt(9) + grass(10.5)
+    // terrain
     this.pushMatrix();
     this.rotate(-Math.PI / 2, 1, 0, 0);  // Make horizontal (X-Z plane)
     //this.translate(0, 0, -0.5);  // Position below camera at y=-0.5
@@ -209,7 +188,7 @@ export class MyScene extends CGFscene {
     this.terrainShader.setUniformsValues({ uSunDir: terrainSunDir });
     this.heightmapTexture.bind(1); // must match uSampler2 = 1
 
-    this.grassAppearance.apply();
+    this.terrainAppearance.apply();
     this.terrain.display();
 
     this.setActiveShader(this.defaultShader);
