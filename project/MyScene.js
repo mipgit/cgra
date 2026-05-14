@@ -87,7 +87,7 @@ export class MyScene extends CGFscene {
     this.grassAppearance.setSpecular(0, 0, 0, 1);
     this.grassAppearance.setEmission(0, 0, 0, 1);
     this.grassAppearance.setShininess(10);
-    this.grassTexture = new CGFtexture(this, "textures/just_green.jpeg");
+    this.grassTexture = new CGFtexture(this, "textures/grass2.jpg");
     this.grassAppearance.setTexture(this.grassTexture);
     this.grassAppearance.setTextureWrap('REPEAT', 'REPEAT');
     
@@ -184,7 +184,7 @@ export class MyScene extends CGFscene {
     });
 
     this.pushMatrix();
-    this.scale(40, 40, 40);
+    this.scale(100, 100, 100);
     // Disable culling to see both sides
     this.gl.disable(this.gl.CULL_FACE);
     this.skyAppearance.apply();
@@ -201,7 +201,7 @@ export class MyScene extends CGFscene {
     this.pushMatrix();
     this.rotate(-Math.PI / 2, 1, 0, 0);  // Make horizontal (X-Z plane)
     //this.translate(0, 0, -0.5);  // Position below camera at y=-0.5
-    this.scale(80,80,1);
+    this.scale(200,200,1);
 
     // Convert world sun direction to terrain local space (terrain uses Rx(-90deg)).
     const terrainSunDir = [sunDir[0], -sunDir[2], sunDir[1]];
