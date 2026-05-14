@@ -43,6 +43,13 @@ export class MyScene extends CGFscene {
     
     this.skyShader = new CGFshader(this.gl, "shaders/skyglow.vert", "shaders/skyglow.frag");
 
+    this.terrainShader = new CGFshader(this.gl, "shaders/terrain.vert", "shaders/terrain.frag");
+    this.heightmapTexture = new CGFtexture(this, "textures/heightmap.png");
+    this.terrainShader.setUniformsValues({ uSampler2: 1 });
+    this.terrainShader.setUniformsValues({ uHeightScale: 6.0 });
+    this.terrainShader.setUniformsValues({ uTexelSize: [1.0 / 1024.0, 1.0 / 1024.0] });
+
+
     // Sky appearance with texture - using TP5 style settings
     this.skyAppearance = new CGFappearance(this);
     this.skyAppearance.setAmbient(0.3, 0.3, 0.3, 1);
@@ -56,7 +63,7 @@ export class MyScene extends CGFscene {
 
     // Sun
     this.sunAppearance = new CGFappearance(this);
-    this.sunAppearance.setEmission(1.0, 0.9, 0.6, 1.0); 
+    this.sunAppearance.setEmission(2.0, 1.8, 1.2, 1.0);
     this.sunAppearance.setDiffuse(0, 0, 0, 1);
     this.sunAppearance.setAmbient(0, 0, 0, 1);
     this.sunAppearance.setSpecular(0, 0, 0, 1);
@@ -70,15 +77,17 @@ export class MyScene extends CGFscene {
     this.grassLeft = new MyPlane(this, 50);
     this.dirtPath = new MyPlane(this, 50);
     this.grassRight = new MyPlane(this, 50);
+
+    this.terrain = new MyPlane(this, 100);
     
     // Grass appearance
     this.grassAppearance = new CGFappearance(this);
     this.grassAppearance.setAmbient(0.3, 0.3, 0.3, 1);
-    this.grassAppearance.setDiffuse(0.7, 0.7, 0.7, 1);
+    this.grassAppearance.setDiffuse(1.0, 1.0, 1.0, 1.0);
     this.grassAppearance.setSpecular(0, 0, 0, 1);
     this.grassAppearance.setEmission(0, 0, 0, 1);
     this.grassAppearance.setShininess(10);
-    this.grassTexture = new CGFtexture(this, "textures/grass.jpg");
+    this.grassTexture = new CGFtexture(this, "textures/just_green.jpeg");
     this.grassAppearance.setTexture(this.grassTexture);
     this.grassAppearance.setTextureWrap('REPEAT', 'REPEAT');
     
@@ -100,8 +109,9 @@ export class MyScene extends CGFscene {
   initLights() {
     // Sun light
     this.lights[0].setPosition(0, 0, 0, 1);
-    this.lights[0].setAmbient(0.05, 0.05, 0.05, 1.0);
-    this.lights[0].setDiffuse(1.0, 1.0, 0.95, 1.0);
+    this.lights[0].setAmbient(1.0, 1.0, 1.0, 1.0);  
+    this.lights[0].setDiffuse(2.0, 2.0, 2.0, 1.0);  // talvez diminuir
+    this.lights[0].setSpecular(1.5, 1.5, 1.425, 1.0);
     this.lights[0].setSpecular(1.0, 1.0, 0.95, 1.0);
     this.lights[0].setConstantAttenuation(1.0);
     this.lights[0].setLinearAttenuation(0.0);
@@ -190,31 +200,22 @@ export class MyScene extends CGFscene {
     // Total width 30: grass(10.5) + dirt(9) + grass(10.5)
     this.pushMatrix();
     this.rotate(-Math.PI / 2, 1, 0, 0);  // Make horizontal (X-Z plane)
-    this.translate(0, 0, -0.5);  // Position below camera at y=-0.5
-    
-    // Left grass strip (35% of width = 10.5 units)
-    this.pushMatrix();
-    this.translate(-9.75, 0, 0);  // Position on left
-    this.scale(10.5, 100, 1);  // Width 10.5, length 100 (long path)
+    //this.translate(0, 0, -0.5);  // Position below camera at y=-0.5
+    this.scale(80,80,1);
+
+    // Convert world sun direction to terrain local space (terrain uses Rx(-90deg)).
+    const terrainSunDir = [sunDir[0], -sunDir[2], sunDir[1]];
+    this.setActiveShader(this.terrainShader);
+    this.terrainShader.setUniformsValues({ uSunDir: terrainSunDir });
+    this.heightmapTexture.bind(1); // must match uSampler2 = 1
+
     this.grassAppearance.apply();
-    this.grassLeft.display();
-    this.popMatrix();
+    this.terrain.display();
+
+    this.setActiveShader(this.defaultShader);
+
     
-    // Center dirt path (30% of width = 9 units)
-    this.pushMatrix();
-    this.translate(0, 0, 0);  // Center
-    this.scale(9, 100, 1);  // Width 9, length 100
-    this.dirtAppearance.apply();
-    this.dirtPath.display();
-    this.popMatrix();
-    
-    // Right grass strip (35% of width = 10.5 units)
-    this.pushMatrix();
-    this.translate(9.75, 0, 0);  // Position on right
-    this.scale(10.5, 100, 1);  // Width 10.5, length 100
-    this.grassAppearance.apply();
-    this.grassRight.display();
-    this.popMatrix();
+ 
     
     this.popMatrix();
 
