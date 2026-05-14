@@ -28,13 +28,14 @@ void main() {
     float dHx = (hR - hL) * uHeightScale;
     float dHy = (hU - hD) * uHeightScale;
 
-    vec3 normal = normalize(vec3(-dHx, -dHy, 1.0));
+    float slopeBoost = 2.0;
+    vec3 normal = normalize(vec3(-dHx * slopeBoost, -dHy * slopeBoost, 1.0));
     vec3 lightDir = normalize(uSunDir);
 
     float diffuse = max(dot(normal, lightDir), 0.0);
-    float ambient = 0.60;
-    float shade = ambient + diffuse * 0.40;
-    shade = clamp(shade, 0.65, 1.05);
+    float ambient = 0.35;
+    float shade = ambient + diffuse * 0.75;
+    shade = clamp(shade, 0.30, 1.0);
 
     fragColor = vec4(base * shade, 1.0);
 }
