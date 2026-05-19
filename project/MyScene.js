@@ -30,9 +30,8 @@ export class MyScene extends CGFscene {
 
     //Initialize scene objects
     this.axis = new CGFaxis(this);
-
-    // Sky sphere with texture on inside
     this.sphere = new MySphere(this, 50, 50);
+    this.terrain = new MyPlane(this, 100);
     
     // Load all sky textures
     this.textures = {
@@ -57,7 +56,7 @@ export class MyScene extends CGFscene {
 
     // Sun
     this.sunAppearance = new CGFappearance(this);
-    this.sunAppearance.setEmission(1.0, 0.9, 0.6, 1.0); 
+    this.sunAppearance.setEmission(2.0, 1.8, 1.2, 1.0);
     this.sunAppearance.setDiffuse(0, 0, 0, 1);
     this.sunAppearance.setAmbient(0, 0, 0, 1);
     this.sunAppearance.setSpecular(0, 0, 0, 1);
@@ -66,6 +65,35 @@ export class MyScene extends CGFscene {
     this.sunU = 4919 / 8192;
     this.sunV = 1387 / 4096;
 
+    // terrain shaders
+    this.terrainShader = new CGFshader(this.gl, "shaders/terrain.vert", "shaders/terrain.frag");
+    this.heightmapTexture = new CGFtexture(this, "textures/heightmap.png");
+    this.pathTexture = new CGFtexture(this, "textures/path.jpg");
+    this.terrainShader.setUniformsValues({ uSampler2: 1 });
+    this.terrainShader.setUniformsValues({ uPathTexture: 3 });
+    this.terrainShader.setUniformsValues({ uHeightScale: 7.0 });
+    this.terrainShader.setUniformsValues({ uTexelSize: [1.0 / 1024.0, 1.0 / 1024.0] });
+    
+    // Dirt path 
+    this.pathWidth = 0.06;
+    this.pathWaveAmplitude = 0.12;
+    this.pathWaveFrequency = 4.0;
+    this.terrainShader.setUniformsValues({
+      uPathWidth: this.pathWidth,
+      uPathWaveAmplitude: this.pathWaveAmplitude,
+      uPathWaveFrequency: this.pathWaveFrequency
+    });
+
+    // terrain appearance
+    this.terrainAppearance = new CGFappearance(this);
+    this.terrainAppearance.setAmbient(0.3, 0.3, 0.3, 1);
+    this.terrainAppearance.setDiffuse(1.0, 1.0, 1.0, 1.0);
+    this.terrainAppearance.setSpecular(0, 0, 0, 1);
+    this.terrainAppearance.setEmission(0, 0, 0, 1);
+    this.terrainAppearance.setShininess(10);
+    this.terrainTexture = new CGFtexture(this, "textures/just_green.jpeg");
+    this.terrainAppearance.setTexture(this.terrainTexture);
+    this.terrainAppearance.setTextureWrap('REPEAT', 'REPEAT');
 
     this.floor = new MyPlane(this, 10);
 
@@ -84,6 +112,7 @@ export class MyScene extends CGFscene {
     this.floorAppearance.setEmission(0, 0, 0, 1);
     this.floorAppearance.setShininess(5);
 
+
     //Objects connected to MyInterface
     this.displayAxis = true;
   }
@@ -91,8 +120,9 @@ export class MyScene extends CGFscene {
   initLights() {
     // Sun light
     this.lights[0].setPosition(0, 0, 0, 1);
-    this.lights[0].setAmbient(0.05, 0.05, 0.05, 1.0);
-    this.lights[0].setDiffuse(1.0, 1.0, 0.95, 1.0);
+    this.lights[0].setAmbient(1.0, 1.0, 1.0, 1.0);  
+    this.lights[0].setDiffuse(2.0, 2.0, 2.0, 1.0);  // talvez diminuir
+    this.lights[0].setSpecular(1.5, 1.5, 1.425, 1.0);
     this.lights[0].setSpecular(1.0, 1.0, 0.95, 1.0);
     this.lights[0].setConstantAttenuation(1.0);
     this.lights[0].setLinearAttenuation(0.0);
@@ -165,7 +195,7 @@ export class MyScene extends CGFscene {
     });
 
     this.pushMatrix();
-    this.scale(40, 40, 40);
+    this.scale(100, 100, 100);
     // Disable culling to see both sides
     this.gl.disable(this.gl.CULL_FACE);
     this.skyAppearance.apply();
@@ -177,6 +207,28 @@ export class MyScene extends CGFscene {
     this.setActiveShader(this.defaultShader);
 
 
+
+    // terrain
+    this.pushMatrix();
+    this.rotate(-Math.PI / 2, 1, 0, 0);  // Make horizontal (X-Z plane)
+    //this.translate(0, 0, -0.5);  // Position below camera at y=-0.5
+    this.scale(200,200,1);
+
+    // Convert world sun direction to terrain local space (terrain uses Rx(-90deg)).
+    const terrainSunDir = [sunDir[0], -sunDir[2], sunDir[1]];
+    this.setActiveShader(this.terrainShader);
+    this.terrainShader.setUniformsValues({ uSunDir: terrainSunDir });
+    this.heightmapTexture.bind(1); // must match uSampler2 = 1
+    this.pathTexture.bind(3); // must match uPathTexture = 3
+
+    this.terrainAppearance.apply();
+    this.terrain.display();
+
+    this.setActiveShader(this.defaultShader);
+
+    
+ 
+    
     this.pushMatrix();
     this.rotate(-Math.PI / 2, 1, 0, 0);
     this.translate(0, 0, -0.5);
@@ -190,6 +242,7 @@ export class MyScene extends CGFscene {
     this.translate(0, -0.5, 0);
     this.pinkGrassAppearance.apply();
     this.grass.display();
+
     this.popMatrix();
 
     // ---- END Primitive drawing section
