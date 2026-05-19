@@ -4,10 +4,10 @@ precision highp float;
 in vec2 vTexCoord;
 uniform sampler2D uSampler; // base terrain texture (from appearance)
 uniform sampler2D uSampler2; // heightmap
+uniform sampler2D uPathTexture; // path texture
 uniform vec3 uSunDir; // sun direction in terrain local coordinates
 uniform float uHeightScale;
 uniform vec2 uTexelSize;
-uniform vec3 uDirtColor;
 uniform float uPathWidth;
 uniform float uPathWaveAmplitude;
 uniform float uPathWaveFrequency;
@@ -41,12 +41,13 @@ void main() {
     float shade = ambient + diffuse * 0.75;
     shade = clamp(shade, 0.30, 1.0);
 
-    // Create dirt path
+    // Create dirt path with texture
     float pathCenterY = 0.5 + sin(vTexCoord.x * uPathWaveFrequency) * uPathWaveAmplitude;
     float distFromPath = abs(vTexCoord.y - pathCenterY);
-    float pathMask = smoothstep(uPathWidth + 0.05, uPathWidth - 0.05, distFromPath);
+    float pathMask = step(distFromPath, uPathWidth);
     
-    vec3 finalColor = mix(base, uDirtColor, pathMask);
+    vec3 pathTexel = texture(uPathTexture, vTexCoord).rgb;
+    vec3 finalColor = mix(base, pathTexel, pathMask);
 
     fragColor = vec4(finalColor * shade, 1.0);
 }
