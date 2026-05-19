@@ -105,12 +105,14 @@ export class MyScene extends CGFscene {
     this.pinkGrassAppearance.setEmission(0, 0, 0, 1);
     this.pinkGrassAppearance.setShininess(5);
 
+    /*
     this.floorAppearance = new CGFappearance(this);
     this.floorAppearance.setAmbient(0.2, 0.6, 0.2, 1);
     this.floorAppearance.setDiffuse(0.3, 0.7, 0.3, 1);
     this.floorAppearance.setSpecular(0, 0, 0, 1);
     this.floorAppearance.setEmission(0, 0, 0, 1);
     this.floorAppearance.setShininess(5);
+    */
 
 
     //Objects connected to MyInterface
