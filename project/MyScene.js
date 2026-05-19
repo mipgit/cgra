@@ -1,6 +1,7 @@
 import { CGFscene, CGFcamera, CGFaxis, CGFappearance, CGFtexture, CGFshader } from "../lib/CGF.js";
 import { MySphere } from "./MySphere.js";
 import { MyPlane } from "./MyPlane.js";
+import { MyGrass } from "./MyGrass.js";
 
 /**
  * MyScene
@@ -93,6 +94,24 @@ export class MyScene extends CGFscene {
     this.terrainTexture = new CGFtexture(this, "textures/just_green.jpeg");
     this.terrainAppearance.setTexture(this.terrainTexture);
     this.terrainAppearance.setTextureWrap('REPEAT', 'REPEAT');
+
+    this.floor = new MyPlane(this, 10);
+
+    this.grass = new MyGrass(this);
+    this.pinkGrassAppearance = new CGFappearance(this);
+    this.pinkGrassAppearance.setAmbient(0.9, 0.4, 0.6, 1);
+    this.pinkGrassAppearance.setDiffuse(1.0, 0.5, 0.7, 1);
+    this.pinkGrassAppearance.setSpecular(0, 0, 0, 1);
+    this.pinkGrassAppearance.setEmission(0, 0, 0, 1);
+    this.pinkGrassAppearance.setShininess(5);
+
+    this.floorAppearance = new CGFappearance(this);
+    this.floorAppearance.setAmbient(0.2, 0.6, 0.2, 1);
+    this.floorAppearance.setDiffuse(0.3, 0.7, 0.3, 1);
+    this.floorAppearance.setSpecular(0, 0, 0, 1);
+    this.floorAppearance.setEmission(0, 0, 0, 1);
+    this.floorAppearance.setShininess(5);
+
 
     //Objects connected to MyInterface
     this.displayAxis = true;
@@ -188,6 +207,7 @@ export class MyScene extends CGFscene {
     this.setActiveShader(this.defaultShader);
 
 
+
     // terrain
     this.pushMatrix();
     this.rotate(-Math.PI / 2, 1, 0, 0);  // Make horizontal (X-Z plane)
@@ -209,6 +229,20 @@ export class MyScene extends CGFscene {
     
  
     
+    this.pushMatrix();
+    this.rotate(-Math.PI / 2, 1, 0, 0);
+    this.translate(0, 0, -0.5);
+    this.scale(80, 80, 1);
+    this.floorAppearance.apply();
+    this.floor.display();
+    this.popMatrix();
+
+    // Pink grass piece sitting on the floor
+    this.pushMatrix();
+    this.translate(0, -0.5, 0);
+    this.pinkGrassAppearance.apply();
+    this.grass.display();
+
     this.popMatrix();
 
     // ---- END Primitive drawing section
