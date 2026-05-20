@@ -1,7 +1,8 @@
 import { CGFscene, CGFcamera, CGFaxis, CGFappearance, CGFtexture, CGFshader } from "../lib/CGF.js";
 import { MySphere } from "./MySphere.js";
 import { MyPlane } from "./MyPlane.js";
-import { MyGrass } from "./MyGrass.js";
+import { MyGrassField } from "./MyGrassField.js";
+import { MyFlower } from "./MyFlower.js";
 
 /**
  * MyScene
@@ -68,14 +69,142 @@ export class MyScene extends CGFscene {
 
 
     this.floor = new MyPlane(this, 10);
+    this.flower = new MyFlower(this);   // single shared instance, reused for all patches
 
-    this.grass = new MyGrass(this);
-    this.pinkGrassAppearance = new CGFappearance(this);
-    this.pinkGrassAppearance.setAmbient(0.9, 0.4, 0.6, 1);
-    this.pinkGrassAppearance.setDiffuse(1.0, 0.5, 0.7, 1);
-    this.pinkGrassAppearance.setSpecular(0, 0, 0, 1);
-    this.pinkGrassAppearance.setEmission(0, 0, 0, 1);
-    this.pinkGrassAppearance.setShininess(5);
+    // ── Flower patch generation ──────────────────────────────────────
+    const pastelPalette = [
+      [255, 182, 193], // pink
+      [230, 190, 255], // lavender
+      [255, 218, 185], // peach
+      [255, 255, 180], // pale yellow
+      [180, 255, 210], // mint
+      [200, 162, 200], // lilac
+      [173, 216, 230], // sky blue
+      [255, 200, 210], // rose
+      [255, 240, 180], // cream
+      [210, 245, 205], // pale green
+    ];
+
+    const rand = (lo, hi) => lo + Math.random() * (hi - lo);
+    const randi = (lo, hi) => lo + Math.floor(Math.random() * (hi - lo + 1));
+    const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+
+    // grass roots at world Y=0, tips at Y≈0.25–0.53
+    // flowers root at Y=0 too; stemHeight 0.22–0.48 puts bloom right at grass tip level
+    const makeFlower = (pcx, pcz, spread = 3.0) => {
+      const angle = Math.random() * Math.PI * 2;
+      const r = Math.sqrt(Math.random()) * spread;
+      const petalScale = rand(0.20, 0.50);
+      const bloomRadius = rand(petalScale / 8, petalScale / 3);
+      // each flower picks its own colour — mixed species within a patch
+      const col = pastelPalette[Math.floor(Math.random() * pastelPalette.length)];
+      const jitter = () => clamp(Math.round((Math.random() - 0.5) * 25), -50, 50);
+      const petalColor = col.map(c => clamp(c + jitter(), 155, 255));
+      return {
+        x:   pcx + Math.cos(angle) * r,
+        z:   pcz + Math.sin(angle) * r,
+        rot: Math.random() * Math.PI * 2,
+        params: {
+          stemHeight:  rand(0.2, 0.6),   // bloom at Y 0.22–0.48, grass tip level
+          leafCount:   randi(1, 4),
+          leafHeight:  rand(0.2, 0.4),
+          leafScale:   rand(0.3, 0.7),
+          leafSpread:  rand(0.3, 0.9),
+          bloomRadius,
+          petalCount:  randi(6, 12),
+          petalScale,
+          petalTilt:   rand(0.3, 0.5),
+          petalColor,
+        },
+      };
+    };
+
+    this.flowerInstances = [];
+
+    // Center patch — always present, denser
+    for (let f = 0; f < randi(12, 18); f++)
+      this.flowerInstances.push(makeFlower(0, 0, 2.2));
+
+    // Scattered patches across the field
+    const patchCount = 28;
+    for (let p = 0; p < patchCount; p++) {
+      const pcx = rand(-55, 55);
+      const pcz = rand(-55, 55);
+      const flowersInPatch = randi(8, 16);
+      for (let f = 0; f < flowersInPatch; f++)
+        this.flowerInstances.push(makeFlower(pcx, pcz, 3.5));
+    }
+
+    this.grassShader = new CGFshader(this.gl, "shaders/grass.vert", "shaders/grass.frag");
+    this.grassShader.setUniformsValues({
+        uColor: [0.2, 0.6, 0.15, 1.0],
+        uWindStrength: 0.08,
+        uWindSpeed: 1.5,
+        uTime: 0.0,
+    });
+
+    this.deadGrassShader = new CGFshader(this.gl, "shaders/grass.vert", "shaders/grass.frag");
+    this.deadGrassShader.setUniformsValues({
+        uColor: [0.52, 0.42, 0.14, 1.0],
+        uWindStrength: 0.04,
+        uWindSpeed: 0.8,
+        uTime: 0.0,
+    });
+
+    this.windStrength = 0.08;
+    this.windSpeed = 1.5;
+
+    // Helper: split a positions array into MyGrassField chunks (max 4000/chunk for Uint16 safety)
+    const makeFields = (positions) => {
+        const CHUNK = 4000;
+        const fields = [];
+        for (let i = 0; i < positions.length; i += CHUNK)
+            fields.push(new MyGrassField(this, positions.slice(i, i + CHUNK)));
+        return fields;
+    };
+
+    // Green grass — dense, full world coverage
+    const greenPositions = [];
+    const gridStep = 1;
+    const gridRange = 50;
+    for (let gx = -gridRange; gx <= gridRange; gx += gridStep) {
+        for (let gz = -gridRange; gz <= gridRange; gz += gridStep) {
+            const cx = gx + (Math.random() - 0.5) * gridStep * 0.6;
+            const cz = gz + (Math.random() - 0.5) * gridStep * 0.6;
+            for (let i = 0; i < 40; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const r = Math.sqrt(Math.random()) * 2.2;
+                greenPositions.push({
+                    x: cx + Math.cos(angle) * r,
+                    z: cz + Math.sin(angle) * r,
+                    rot: Math.random() * Math.PI * 2,
+                    tilt: (Math.random() - 0.5) * 0.4,
+                    scale: 0.18 + Math.random() * 0.2,
+                });
+            }
+        }
+    }
+    this.grassFields = makeFields(greenPositions);
+
+    // Dead grass — sparse scattered patches
+    const deadPositions = [];
+    for (let i = 0; i < 18; i++) {
+        const pcx = (Math.random() - 0.5) * 70;
+        const pcz = (Math.random() - 0.5) * 70;
+        const count = 25 + Math.floor(Math.random() * 30);
+        for (let j = 0; j < count; j++) {
+            const angle = Math.random() * Math.PI * 2;
+            const r = Math.sqrt(Math.random()) * 3.5;
+            deadPositions.push({
+                x: pcx + Math.cos(angle) * r,
+                z: pcz + Math.sin(angle) * r,
+                rot: Math.random() * Math.PI * 2,
+                tilt: (Math.random() - 0.5) * 0.6,
+                scale: 0.18 + Math.random() * 0.22,
+            });
+        }
+    }
+    this.deadGrassFields = makeFields(deadPositions);
 
     this.floorAppearance = new CGFappearance(this);
     this.floorAppearance.setAmbient(0.2, 0.6, 0.2, 1);
@@ -119,7 +248,7 @@ export class MyScene extends CGFscene {
   }
 
   updateTexture() {
-    this.skyAppearance.setTexture('this.textures[this.selectedTexture]');
+    this.skyAppearance.setTexture(this.textures[this.selectedTexture]);
   }
 
   display() {
@@ -185,12 +314,28 @@ export class MyScene extends CGFscene {
     this.floor.display();
     this.popMatrix();
 
-    // Pink grass piece sitting on the floor
-    this.pushMatrix();
-    this.translate(0, -0.5, 0);
-    this.pinkGrassAppearance.apply();
-    this.grass.display();
-    this.popMatrix();
+    // Grass
+    const now = performance.now() / 1000.0;
+    this.gl.disable(this.gl.CULL_FACE);
+    this.setActiveShader(this.grassShader);
+    this.grassShader.setUniformsValues({ uTime: now });
+    for (const f of this.grassFields) f.display();
+    this.setActiveShader(this.deadGrassShader);
+    this.deadGrassShader.setUniformsValues({ uTime: now });
+    for (const f of this.deadGrassFields) f.display();
+    this.setActiveShader(this.defaultShader);
+    this.gl.enable(this.gl.CULL_FACE);
+
+    // Flower patches
+    this.gl.disable(this.gl.CULL_FACE);
+    for (const inst of this.flowerInstances) {
+      this.pushMatrix();
+      this.translate(inst.x, -0.5, inst.z);
+      this.rotate(inst.rot, 0, 1, 0);
+      this.flower.display(inst.params);
+      this.popMatrix();
+    }
+    this.gl.enable(this.gl.CULL_FACE);
 
     // ---- END Primitive drawing section
   }

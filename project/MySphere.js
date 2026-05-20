@@ -1,10 +1,11 @@
 import { CGFobject } from "../lib/CGF.js";
 
 export class MySphere extends CGFobject {
-  constructor(scene, slices, stacks) {
+  constructor(scene, slices, stacks, invert = true) {
     super(scene);
     this.slices = slices;
     this.stacks = stacks;
+    this.invert = invert;
     this.initBuffers();
   }
 
@@ -29,19 +30,25 @@ export class MySphere extends CGFobject {
         const z = sinPhi * sinTheta;
 
         this.vertices.push(x, y, z);
-        // Inverted normals so inside face is lit properly
-        this.normals.push(-x, -y, -z);
+        const s = this.invert ? -1 : 1;
+        this.normals.push(s*x, s*y, s*z);
         this.texCoords.push(slice / this.slices, stack / this.stacks);
       }
     }
 
-    // Reversed winding for inside-facing
     for (let stack = 0; stack < this.stacks; stack++) {
       for (let slice = 0; slice < this.slices; slice++) {
         const a = stack * (this.slices + 1) + slice;
         const b = a + this.slices + 1;
-        this.indices.push(a, b, a + 1);
-        this.indices.push(b, b + 1, a + 1);
+        if (this.invert) {
+          // Reversed winding — lit from inside (sky)
+          this.indices.push(a, b, a + 1);
+          this.indices.push(b, b + 1, a + 1);
+        } else {
+          // Normal winding — lit from outside
+          this.indices.push(a, a + 1, b);
+          this.indices.push(b, a + 1, b + 1);
+        }
       }
     }
 
