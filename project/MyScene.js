@@ -2,7 +2,7 @@ import { CGFscene, CGFcamera, CGFaxis, CGFappearance, CGFtexture, CGFshader } fr
 import { MySphere } from "./MySphere.js";
 import { MyPlane } from "./MyPlane.js";
 import { MyGrassField } from "./MyGrassField.js";
-import { MyFlower } from "./MyFlower.js";
+import { MyFlowerField } from "./MyFlowerField.js";
 
 /**
  * MyScene
@@ -69,7 +69,6 @@ export class MyScene extends CGFscene {
 
 
     this.floor = new MyPlane(this, 10);
-    this.flower = new MyFlower(this);   // single shared instance, reused for all patches
 
     // ── Flower patch generation ──────────────────────────────────────
     const pastelPalette = [
@@ -84,55 +83,126 @@ export class MyScene extends CGFscene {
       [255, 240, 180], // cream
       [210, 245, 205], // pale green
     ];
+    // Warm centres — gold, amber, deep amber, brown, dark
+    const bloomPalette = [
+      [240, 195, 45],
+      [220, 160, 40],
+      [200, 130, 35],
+      [140, 90,  30],
+      [90,  60,  25],
+    ];
 
     const rand = (lo, hi) => lo + Math.random() * (hi - lo);
     const randi = (lo, hi) => lo + Math.floor(Math.random() * (hi - lo + 1));
     const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
-    // grass roots at world Y=0, tips at Y≈0.25–0.53
-    // flowers root at Y=0 too; stemHeight 0.22–0.48 puts bloom right at grass tip level
-    const makeFlower = (pcx, pcz, spread = 3.0) => {
+    // Each flower derives stem / petal / bloom / leaf from one baseSize using species ratios,
+    // so a flower's parts stay proportional. baseSize stays close to grass tip height (~0.53)
+    // so blooms peek just above the canopy.
+    const jitterPct = (pct) => 1.0 + (Math.random() - 0.5) * 2 * pct;
+
+    const makeFlower = (pcx, pcz, spread, species) => {
       const angle = Math.random() * Math.PI * 2;
       const r = Math.sqrt(Math.random()) * spread;
-      const petalScale = rand(0.20, 0.50);
-      const bloomRadius = rand(petalScale / 8, petalScale / 3);
-      // each flower picks its own colour — mixed species within a patch
-      const col = pastelPalette[Math.floor(Math.random() * pastelPalette.length)];
-      const jitter = () => clamp(Math.round((Math.random() - 0.5) * 25), -50, 50);
-      const petalColor = col.map(c => clamp(c + jitter(), 155, 255));
+
+      const baseSize    = rand(species.baseSizeLo, species.baseSizeHi);
+      const stemHeight  = baseSize * jitterPct(0.06);                   // ±6 %
+      const petalScale  = baseSize * species.petalRatio * jitterPct(0.08);
+      const bloomRadius = petalScale * species.bloomRatio * jitterPct(0.08);
+      const leafScale   = baseSize * species.leafRatio  * jitterPct(0.10);
+
+      // Each flower picks one of the patch's petal hues (2–4 colours per patch) so a colony
+      // Pick one of the patch's 2–4 petal hues so a colony shows variety but stays coherent
+      const baseHue = species.petalHues[Math.floor(Math.random() * species.petalHues.length)];
+      const jitter = () => clamp(Math.round((Math.random() - 0.5) * 22), -50, 50);
+      const petalColor = baseHue.map(c => clamp(c + jitter(), 150, 255));
+      const baseBloom = species.bloomHues[Math.floor(Math.random() * species.bloomHues.length)];
+      const bloomColor = baseBloom.map(c => clamp(c + (Math.random() - 0.5) * 22, 30, 255));
+
+      const ringCount = (Math.random() < species.doubleRingChance) ? 2 : 1;
+
       return {
-        x:   pcx + Math.cos(angle) * r,
-        z:   pcz + Math.sin(angle) * r,
-        rot: Math.random() * Math.PI * 2,
+        x:        pcx + Math.cos(angle) * r,
+        z:        pcz + Math.sin(angle) * r,
+        rot:      Math.random() * Math.PI * 2,
+        tiltX:    (Math.random() - 0.5) * 0.4,
+        tiltZ:    (Math.random() - 0.5) * 0.4,
         params: {
-          stemHeight:  rand(0.2, 0.6),   // bloom at Y 0.22–0.48, grass tip level
-          leafCount:   randi(1, 4),
-          leafHeight:  rand(0.2, 0.4),
-          leafScale:   rand(0.3, 0.7),
-          leafSpread:  rand(0.3, 0.9),
+          stemHeight,
+          leafCount:   randi(2, 4),
+          leafHeight:  rand(0.25, 0.55),
+          leafScale,
+          leafSpread:  rand(0.4, 0.9),
           bloomRadius,
-          petalCount:  randi(6, 12),
+          bloomFlatness: rand(0.35, 0.55),
+          bloomColor,
+          petalCount:  randi(species.petalCountLo, species.petalCountHi),
           petalScale,
-          petalTilt:   rand(0.3, 0.5),
+          petalTilt:   rand(species.petalTiltLo, species.petalTiltHi),
           petalColor,
+          ringCount,
         },
       };
     };
 
+    // Three archetypes; each patch picks 2–4 petal hues + 1–2 bloom hues for variety.
+    const pickHues = (palette, lo, hi) => {
+      const n = randi(lo, hi);
+      const pool = palette.slice();
+      const out = [];
+      for (let i = 0; i < n && pool.length; i++)
+        out.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+      return out;
+    };
+    const makeSpecies = () => {
+      const archetype = Math.random();
+      const petalHues = pickHues(pastelPalette, 2, 4);
+      const bloomHues = pickHues(bloomPalette, 1, 2);
+      if (archetype < 0.4) {
+        // Daisy-like — sits in-canopy / just at the tip line
+        return { petalHues, bloomHues,
+          baseSizeLo: 0.28, baseSizeHi: 0.42,
+          petalRatio: 0.38, bloomRatio: 0.30, leafRatio: 0.50,
+          petalCountLo: 10, petalCountHi: 14,
+          petalTiltLo: 0.18, petalTiltHi: 0.36,
+          doubleRingChance: 0.15 };
+      } else if (archetype < 0.75) {
+        // Lush bloom — slightly above canopy, proportionally larger petals & centre
+        return { petalHues, bloomHues,
+          baseSizeLo: 0.34, baseSizeHi: 0.46,
+          petalRatio: 0.46, bloomRatio: 0.32, leafRatio: 0.56,
+          petalCountLo: 7, petalCountHi: 10,
+          petalTiltLo: 0.30, petalTiltHi: 0.50,
+          doubleRingChance: 0.30 };
+      } else {
+        // Tulip-like — few cupped petals, no bloom centre (they cup-close naturally)
+        return { petalHues, bloomHues,
+          baseSizeLo: 0.32, baseSizeHi: 0.44,
+          petalRatio: 0.42, bloomRatio: 0.0, leafRatio: 0.52,
+          petalCountLo: 5, petalCountHi: 8,
+          petalTiltLo: 0.55, petalTiltHi: 0.80,
+          doubleRingChance: 0.10 };
+      }
+    };
+
     this.flowerInstances = [];
 
-    // Center patch — always present, denser
-    for (let f = 0; f < randi(12, 18); f++)
-      this.flowerInstances.push(makeFlower(0, 0, 2.2));
+    // Center patch — denser, one deliberate species
+    {
+      const sp = makeSpecies();
+      for (let f = 0; f < randi(10, 14); f++)
+        this.flowerInstances.push(makeFlower(0, 0, 2.5, sp));
+    }
 
-    // Scattered patches across the field
-    const patchCount = 28;
+    // Scattered patches across the field — each patch is one species
+    const patchCount = 40;
     for (let p = 0; p < patchCount; p++) {
       const pcx = rand(-55, 55);
       const pcz = rand(-55, 55);
-      const flowersInPatch = randi(8, 16);
+      const sp  = makeSpecies();
+      const flowersInPatch = randi(12, 24);
       for (let f = 0; f < flowersInPatch; f++)
-        this.flowerInstances.push(makeFlower(pcx, pcz, 3.5));
+        this.flowerInstances.push(makeFlower(pcx, pcz, rand(2.8, 4.5), sp));
     }
 
     this.grassShader = new CGFshader(this.gl, "shaders/grass.vert", "shaders/grass.frag");
@@ -142,6 +212,16 @@ export class MyScene extends CGFscene {
         uWindSpeed: 1.5,
         uTime: 0.0,
     });
+
+    // Flower shader — one shader for the whole batched flower mesh, wind sway like grass
+    this.flowerShader = new CGFshader(this.gl, "shaders/flower.vert", "shaders/flower.frag");
+    this.flowerShader.setUniformsValues({
+        uWindStrength: 0.08,
+        uWindSpeed: 1.5,
+        uTime: 0.0,
+        uPetalTex: 0,
+    });
+    this.petalTexture = new CGFtexture(this, "textures/petal.png");
 
     this.deadGrassShader = new CGFshader(this.gl, "shaders/grass.vert", "shaders/grass.frag");
     this.deadGrassShader.setUniformsValues({
@@ -162,6 +242,12 @@ export class MyScene extends CGFscene {
             fields.push(new MyGrassField(this, positions.slice(i, i + CHUNK)));
         return fields;
     };
+
+    // Bake flowers into batched fields — 40 per chunk keeps each under the Uint16 limit
+    const FLOWER_CHUNK = 40;
+    this.flowerFields = [];
+    for (let i = 0; i < this.flowerInstances.length; i += FLOWER_CHUNK)
+        this.flowerFields.push(new MyFlowerField(this, this.flowerInstances.slice(i, i + FLOWER_CHUNK)));
 
     // Green grass — dense, full world coverage
     const greenPositions = [];
@@ -326,15 +412,13 @@ export class MyScene extends CGFscene {
     this.setActiveShader(this.defaultShader);
     this.gl.enable(this.gl.CULL_FACE);
 
-    // Flower patches
+    // Flowers — one draw call per batched field, wind sway in shader matches the grass
     this.gl.disable(this.gl.CULL_FACE);
-    for (const inst of this.flowerInstances) {
-      this.pushMatrix();
-      this.translate(inst.x, -0.5, inst.z);
-      this.rotate(inst.rot, 0, 1, 0);
-      this.flower.display(inst.params);
-      this.popMatrix();
-    }
+    this.setActiveShader(this.flowerShader);
+    this.petalTexture.bind(0);
+    this.flowerShader.setUniformsValues({ uTime: now });
+    for (const f of this.flowerFields) f.display();
+    this.setActiveShader(this.defaultShader);
     this.gl.enable(this.gl.CULL_FACE);
 
     // ---- END Primitive drawing section

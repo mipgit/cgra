@@ -7,34 +7,42 @@ export class MyPetal extends CGFobject {
     }
 
     initBuffers() {
-        const T = 0.013; // half-thickness
+        const T = 0.007;          // half-thickness
+        const ROWS = 10;
+        const TIP_Y = 0.90;
 
-        // Shape matching FBX proportions — wider at mid, gently cupped in Z
-        const rawV = [
-             0,     0,    0,     // 0  base
-            -0.10,  0.07, 0.01, // 1  lower left
-             0.10,  0.07, 0.01, // 2  lower right
-            -0.24,  0.22, 0.04, // 3  mid-low left
-             0.24,  0.22, 0.04, // 4  mid-low right
-            -0.28,  0.42, 0.07, // 5  widest left
-             0.28,  0.42, 0.07, // 6  widest right
-            -0.18,  0.62, 0.04, // 7  upper left
-             0.18,  0.62, 0.04, // 8  upper right
-             0,     0.78, 0.01, // 9  tip
-        ];
-        const rawIdx = [
-            0, 2, 1,
-            1, 2, 4,  1, 4, 3,
-            3, 4, 6,  3, 6, 5,
-            5, 6, 8,  5, 8, 7,
-            7, 8, 9,
-        ];
-        const rawTex = [
-            0.5,1.0, 0.2,0.93, 0.8,0.93, 0.04,0.73, 0.96,0.73,
-            0.0,0.48, 1.0,0.48, 0.18,0.24, 0.82,0.24, 0.5,0.0,
-        ];
+        // Teardrop silhouette: rounded bell, peak slightly past the middle
+        const widthAt = t => 0.34 * Math.pow(Math.sin(Math.PI * Math.pow(t, 0.80)), 0.65);
+        // Z curve: forward cup near the base, tip flares backward (t³ term)
+        const cupAt = t => 0.14 * Math.sin(Math.PI * Math.pow(t, 0.95)) - 0.09 * t * t * t;
 
-        const NV = 10; // rawV.length / 3
+        const rawV = [], rawTex = [];
+        rawV.push(0, 0, 0);
+        rawTex.push(0.5, 1.0);
+        for (let r = 1; r <= ROWS - 1; r++) {
+            const t = r / ROWS;
+            const y = t * TIP_Y;
+            const w = widthAt(t);
+            const z = cupAt(t);
+            rawV.push(-w, y, z); rawTex.push(0.5 - w * 1.5, 1.0 - t);
+            rawV.push( w, y, z); rawTex.push(0.5 + w * 1.5, 1.0 - t);
+        }
+        rawV.push(0, TIP_Y, cupAt(1.0));
+        rawTex.push(0.5, 0.0);
+
+        const NV = rawV.length / 3;
+        const TIP_IDX = NV - 1;
+
+        // Faces: base triangle + row-by-row quads + tip triangle
+        const rawIdx = [];
+        rawIdx.push(0, 2, 1);
+        for (let r = 1; r < ROWS - 1; r++) {
+            const L0 = 1 + 2*(r-1), R0 = L0 + 1;
+            const L1 = 1 + 2*r,     R1 = L1 + 1;
+            rawIdx.push(L0, R0, R1,  L0, R1, L1);
+        }
+        const Llast = 1 + 2*(ROWS-2), Rlast = Llast + 1;
+        rawIdx.push(Llast, Rlast, TIP_IDX);
 
         // ── smooth surface normals via face-normal accumulation ──────
         const acc = Array.from({length: NV}, () => [0,0,0]);
@@ -71,8 +79,11 @@ export class MyPetal extends CGFobject {
         }
 
         // ── Edge vertices (2NV..4NV-1) ────────────────────────────────
-        // Perimeter CCW from front: right side up, left side down
-        const perim = [0, 2, 4, 6, 8, 9, 7, 5, 3, 1];
+        // Perimeter CCW from front: base, up right side (R1..R(ROWS-1)), tip, down left side (L(ROWS-1)..L1)
+        const perim = [0];
+        for (let r = 1; r <= ROWS - 1; r++) perim.push(1 + 2*(r-1) + 1); // R rows
+        perim.push(TIP_IDX);
+        for (let r = ROWS - 1; r >= 1; r--) perim.push(1 + 2*(r-1));    // L rows back down
         const NP = perim.length;
 
         // Outward edge normal per edge: (dy, -dx, 0) for a CCW polygon

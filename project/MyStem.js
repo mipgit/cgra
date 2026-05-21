@@ -9,10 +9,11 @@ export class MyStem extends CGFobject {
     }
 
     initBuffers() {
-        // S-curve spine: normalized height 0→1
+        // S-curve spine: normalized height 0→1.
+        // Top returns to x=0 so the stem tip aligns exactly with the bloom centre.
         const yLevels = [0, 0.28, 0.52, 0.76, 1.0];
-        const xCurve  = [0, 0.01, 0.028, 0.042, 0.038];
-        const radii   = [0.038, 0.034, 0.028, 0.022, 0.016];
+        const xCurve  = [0, 0.008, 0.018, 0.012, 0.000];
+        const radii   = [0.020, 0.017, 0.014, 0.011, 0.009];
 
         this.vertices  = [];
         this.normals   = [];
