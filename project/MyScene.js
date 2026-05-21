@@ -1,7 +1,8 @@
 import { CGFscene, CGFcamera, CGFaxis, CGFappearance, CGFtexture, CGFshader } from "../lib/CGF.js";
 import { MySphere } from "./MySphere.js";
 import { MyPlane } from "./MyPlane.js";
-import { MyGrass } from "./MyGrass.js";
+import { MyGrassField } from "./MyGrassField.js";
+import { MyFlowerField } from "./MyFlowerField.js";
 
 /**
  * MyScene
@@ -95,25 +96,263 @@ export class MyScene extends CGFscene {
     this.terrainAppearance.setTexture(this.terrainTexture);
     this.terrainAppearance.setTextureWrap('REPEAT', 'REPEAT');
 
-    this.floor = new MyPlane(this, 10);
+    // Flower patch generation
+    const pastelPalette = [
+      [255, 182, 193], // pink
+      [230, 190, 255], // lavender
+      [255, 218, 185], // peach
+      [255, 255, 180], // pale yellow
+      [180, 255, 210], // mint
+      [200, 162, 200], // lilac
+      [173, 216, 230], // sky blue
+      [255, 200, 210], // rose
+      [255, 240, 180], // cream
+      [210, 245, 205], // pale green
+    ];
+    // Warm centres — gold, amber, deep amber, brown, dark
+    const bloomPalette = [
+      [240, 195, 45],
+      [220, 160, 40],
+      [200, 130, 35],
+      [140, 90,  30],
+      [90,  60,  25],
+    ];
 
-    this.grass = new MyGrass(this);
-    this.pinkGrassAppearance = new CGFappearance(this);
-    this.pinkGrassAppearance.setAmbient(0.9, 0.4, 0.6, 1);
-    this.pinkGrassAppearance.setDiffuse(1.0, 0.5, 0.7, 1);
-    this.pinkGrassAppearance.setSpecular(0, 0, 0, 1);
-    this.pinkGrassAppearance.setEmission(0, 0, 0, 1);
-    this.pinkGrassAppearance.setShininess(5);
+    const rand = (lo, hi) => lo + Math.random() * (hi - lo);
+    const randi = (lo, hi) => lo + Math.floor(Math.random() * (hi - lo + 1));
+    const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
-    /*
-    this.floorAppearance = new CGFappearance(this);
-    this.floorAppearance.setAmbient(0.2, 0.6, 0.2, 1);
-    this.floorAppearance.setDiffuse(0.3, 0.7, 0.3, 1);
-    this.floorAppearance.setSpecular(0, 0, 0, 1);
-    this.floorAppearance.setEmission(0, 0, 0, 1);
-    this.floorAppearance.setShininess(5);
-    */
+    // Each flower derives stem / petal / bloom / leaf from one baseSize using species ratios,
+    // so a flower's parts stay proportional. baseSize stays close to grass tip height (~0.53)
+    // so blooms peek just above the canopy.
+    const jitterPct = (pct) => 1.0 + (Math.random() - 0.5) * 2 * pct;
 
+    const makeFlower = (pcx, pcz, spread, species) => {
+      const angle = Math.random() * Math.PI * 2;
+      const r = Math.sqrt(Math.random()) * spread;
+
+      const baseSize    = rand(species.baseSizeLo, species.baseSizeHi);
+      const stemHeight  = baseSize * jitterPct(0.06);                   // ±6 %
+      const petalScale  = baseSize * species.petalRatio * jitterPct(0.08);
+      const bloomRadius = petalScale * species.bloomRatio * jitterPct(0.08);
+      const leafScale   = baseSize * species.leafRatio  * jitterPct(0.10);
+
+      // Pick one of the patch's 2–4 petal hues so a colony shows variety but stays coherent
+      const baseHue = species.petalHues[Math.floor(Math.random() * species.petalHues.length)];
+      const jitter = () => clamp(Math.round((Math.random() - 0.5) * 22), -50, 50);
+      const petalColor = baseHue.map(c => clamp(c + jitter(), 150, 255));
+      const baseBloom = species.bloomHues[Math.floor(Math.random() * species.bloomHues.length)];
+      const bloomColor = baseBloom.map(c => clamp(c + (Math.random() - 0.5) * 22, 30, 255));
+
+      const ringCount = (Math.random() < species.doubleRingChance) ? 2 : 1;
+
+      return {
+        x:        pcx + Math.cos(angle) * r,
+        z:        pcz + Math.sin(angle) * r,
+        rot:      Math.random() * Math.PI * 2,
+        tiltX:    (Math.random() - 0.5) * 0.4,
+        tiltZ:    (Math.random() - 0.5) * 0.4,
+        params: {
+          stemHeight,
+          leafCount:   randi(2, 4),
+          leafHeight:  rand(0.25, 0.55),
+          leafScale,
+          leafSpread:  rand(0.4, 0.9),
+          bloomRadius,
+          bloomFlatness: rand(0.35, 0.55),
+          bloomColor,
+          petalCount:  randi(species.petalCountLo, species.petalCountHi),
+          petalScale,
+          petalTilt:   rand(species.petalTiltLo, species.petalTiltHi),
+          petalColor,
+          ringCount,
+        },
+      };
+    };
+
+    // Three archetypes; each patch picks 2–4 petal hues + 1–2 bloom hues for variety.
+    const pickHues = (palette, lo, hi) => {
+      const n = randi(lo, hi);
+      const pool = palette.slice();
+      const out = [];
+      for (let i = 0; i < n && pool.length; i++)
+        out.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+      return out;
+    };
+    const makeSpecies = () => {
+      const archetype = Math.random();
+      const petalHues = pickHues(pastelPalette, 2, 4);
+      const bloomHues = pickHues(bloomPalette, 1, 2);
+      if (archetype < 0.4) {
+        // Daisy-like — sits in-canopy / just at the tip line
+        return { petalHues, bloomHues,
+          baseSizeLo: 0.28, baseSizeHi: 0.42,
+          petalRatio: 0.38, bloomRatio: 0.30, leafRatio: 0.50,
+          petalCountLo: 10, petalCountHi: 14,
+          petalTiltLo: 0.18, petalTiltHi: 0.36,
+          doubleRingChance: 0.15 };
+      } else if (archetype < 0.75) {
+        // Lush bloom — slightly above canopy, proportionally larger petals & centre
+        return { petalHues, bloomHues,
+          baseSizeLo: 0.34, baseSizeHi: 0.46,
+          petalRatio: 0.46, bloomRatio: 0.32, leafRatio: 0.56,
+          petalCountLo: 7, petalCountHi: 10,
+          petalTiltLo: 0.30, petalTiltHi: 0.50,
+          doubleRingChance: 0.30 };
+      } else {
+        // Tulip-like — few cupped petals, no bloom centre (they cup-close naturally)
+        return { petalHues, bloomHues,
+          baseSizeLo: 0.32, baseSizeHi: 0.44,
+          petalRatio: 0.42, bloomRatio: 0.0, leafRatio: 0.52,
+          petalCountLo: 5, petalCountHi: 8,
+          petalTiltLo: 0.55, petalTiltHi: 0.80,
+          doubleRingChance: 0.10 };
+      }
+    };
+
+    // True when (x, z) falls on the dirt path — same sin-wave centerline the terrain
+    // fragment shader uses, so we can avoid placing grass/flowers on the track.
+    const pw = this.pathWidth, pa = this.pathWaveAmplitude, pf = this.pathWaveFrequency;
+    const onPath = (x, z) => {
+      const u = (x + 100) / 200;
+      const v = (z + 100) / 200;
+      return Math.abs(v - (0.5 + Math.sin(u * pf) * pa)) < pw;
+    };
+
+    // Distance falloff: individual blades alias into noise at distance and look worse than
+    // the bare terrain texture, so we cull beyond 70 and thin out between 40 and 70.
+    const DETAIL_FULL = 40, DETAIL_FADE = 70;
+    const tooFar = (x, z) => {
+      const d = Math.sqrt(x*x + z*z);
+      if (d > DETAIL_FADE) return true;
+      if (d > DETAIL_FULL) return Math.random() < (d - DETAIL_FULL) / (DETAIL_FADE - DETAIL_FULL);
+      return false;
+    };
+
+    this.flowerInstances = [];
+
+    // Center patch — denser, one deliberate species (only if the centre isn't on the path)
+    if (!onPath(0, 0)) {
+      const sp = makeSpecies();
+      for (let f = 0; f < randi(10, 14); f++) {
+        const fl = makeFlower(0, 0, 2.5, sp);
+        if (!onPath(fl.x, fl.z)) this.flowerInstances.push(fl);
+      }
+    }
+
+    // Scattered patches across the field — each patch is one species
+    const patchCount = 60;
+    for (let p = 0; p < patchCount; p++) {
+      const pcx = rand(-90, 90);
+      const pcz = rand(-90, 90);
+      if (onPath(pcx, pcz)) continue;     // skip patches whose centre is on the path
+      const sp  = makeSpecies();
+      const flowersInPatch = randi(12, 24);
+      for (let f = 0; f < flowersInPatch; f++) {
+        const fl = makeFlower(pcx, pcz, rand(2.8, 4.5), sp);
+        if (!onPath(fl.x, fl.z)) this.flowerInstances.push(fl);
+      }
+    }
+
+    this.grassShader = new CGFshader(this.gl, "shaders/grass.vert", "shaders/grass.frag");
+    this.grassShader.setUniformsValues({
+        uColor: [0.2, 0.6, 0.15, 1.0],
+        uWindStrength: 0.08,
+        uWindSpeed: 1.5,
+        uTime: 0.0,
+        uHeightmap: 1,
+        uHeightScale: 7.0,
+    });
+
+    // Flower shader — one shader for the whole batched flower mesh, wind sway like grass
+    this.flowerShader = new CGFshader(this.gl, "shaders/flower.vert", "shaders/flower.frag");
+    this.flowerShader.setUniformsValues({
+        uWindStrength: 0.08,
+        uWindSpeed: 1.5,
+        uTime: 0.0,
+        uPetalTex: 0,
+        uHeightmap: 1,
+        uHeightScale: 7.0,
+    });
+    this.petalTexture = new CGFtexture(this, "textures/petal.png");
+
+    this.deadGrassShader = new CGFshader(this.gl, "shaders/grass.vert", "shaders/grass.frag");
+    this.deadGrassShader.setUniformsValues({
+        uColor: [0.52, 0.42, 0.14, 1.0],
+        uWindStrength: 0.04,
+        uWindSpeed: 0.8,
+        uTime: 0.0,
+        uHeightmap: 1,
+        uHeightScale: 7.0,
+    });
+
+    this.windStrength = 0.08;
+    this.windSpeed = 1.5;
+
+    // Helper: split a positions array into MyGrassField chunks (max 4000/chunk for Uint16 safety)
+    const makeFields = (positions) => {
+        const CHUNK = 4000;
+        const fields = [];
+        for (let i = 0; i < positions.length; i += CHUNK)
+            fields.push(new MyGrassField(this, positions.slice(i, i + CHUNK)));
+        return fields;
+    };
+
+    // Bake flowers into batched fields — 40 per chunk keeps each under the Uint16 limit
+    const FLOWER_CHUNK = 40;
+    this.flowerFields = [];
+    for (let i = 0; i < this.flowerInstances.length; i += FLOWER_CHUNK)
+        this.flowerFields.push(new MyFlowerField(this, this.flowerInstances.slice(i, i + FLOWER_CHUNK)));
+
+    // Green grass — covers the detail radius around the camera, skips path + distant areas.
+    // Beyond the radius the terrain texture reads as grass on its own, so individual blades
+    // would just alias into noise.
+    const greenPositions = [];
+    const gridStep = 2;
+    const gridRange = 90;
+    for (let gx = -gridRange; gx <= gridRange; gx += gridStep) {
+        for (let gz = -gridRange; gz <= gridRange; gz += gridStep) {
+            const cx = gx + (Math.random() - 0.5) * gridStep * 0.6;
+            const cz = gz + (Math.random() - 0.5) * gridStep * 0.6;
+            for (let i = 0; i < 60; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const r = Math.sqrt(Math.random()) * 2.2;
+                const x = cx + Math.cos(angle) * r;
+                const z = cz + Math.sin(angle) * r;
+                if (onPath(x, z)) continue;
+                greenPositions.push({
+                    x, z,
+                    rot: Math.random() * Math.PI * 2,
+                    tilt: (Math.random() - 0.5) * 0.4,
+                    scale: 0.18 + Math.random() * 0.2,
+                });
+            }
+        }
+    }
+    this.grassFields = makeFields(greenPositions);
+
+    // Dead grass — sparse scattered patches, also skipping the path
+    const deadPositions = [];
+    for (let i = 0; i < 30; i++) {
+        const pcx = (Math.random() - 0.5) * 170;
+        const pcz = (Math.random() - 0.5) * 170;
+        if (onPath(pcx, pcz)) continue;
+        const count = 25 + Math.floor(Math.random() * 30);
+        for (let j = 0; j < count; j++) {
+            const angle = Math.random() * Math.PI * 2;
+            const r = Math.sqrt(Math.random()) * 3.5;
+            const x = pcx + Math.cos(angle) * r;
+            const z = pcz + Math.sin(angle) * r;
+            if (onPath(x, z)) continue;
+            deadPositions.push({
+                x, z,
+                rot: Math.random() * Math.PI * 2,
+                tilt: (Math.random() - 0.5) * 0.6,
+                scale: 0.18 + Math.random() * 0.22,
+            });
+        }
+    }
+    this.deadGrassFields = makeFields(deadPositions);
 
     //Objects connected to MyInterface
     this.displayAxis = true;
@@ -151,7 +390,7 @@ export class MyScene extends CGFscene {
   }
 
   updateTexture() {
-    this.skyAppearance.setTexture('this.textures[this.selectedTexture]');
+    this.skyAppearance.setTexture(this.textures[this.selectedTexture]);
   }
 
   display() {
@@ -231,21 +470,30 @@ export class MyScene extends CGFscene {
     
  
     
-    this.pushMatrix();
-    this.rotate(-Math.PI / 2, 1, 0, 0);
-    this.translate(0, 0, -0.5);
-    this.scale(80, 80, 1);
-    this.floorAppearance.apply();
-    this.floor.display();
-    this.popMatrix();
+    this.popMatrix();   // pops the terrain matrix
 
-    // Pink grass piece sitting on the floor
-    this.pushMatrix();
-    this.translate(0, -0.5, 0);
-    this.pinkGrassAppearance.apply();
-    this.grass.display();
+    // Grass — sample the same heightmap as the terrain so blades sit on the displaced ground
+    const now = performance.now() / 1000.0;
+    this.heightmapTexture.bind(1);
+    this.gl.disable(this.gl.CULL_FACE);
+    this.setActiveShader(this.grassShader);
+    this.grassShader.setUniformsValues({ uTime: now });
+    for (const f of this.grassFields) f.display();
+    this.setActiveShader(this.deadGrassShader);
+    this.deadGrassShader.setUniformsValues({ uTime: now });
+    for (const f of this.deadGrassFields) f.display();
+    this.setActiveShader(this.defaultShader);
+    this.gl.enable(this.gl.CULL_FACE);
 
-    this.popMatrix();
+    // Flowers — one draw call per batched field, wind sway in shader matches the grass
+    this.gl.disable(this.gl.CULL_FACE);
+    this.setActiveShader(this.flowerShader);
+    this.petalTexture.bind(0);
+    this.heightmapTexture.bind(1);
+    this.flowerShader.setUniformsValues({ uTime: now });
+    for (const f of this.flowerFields) f.display();
+    this.setActiveShader(this.defaultShader);
+    this.gl.enable(this.gl.CULL_FACE);
 
     // ---- END Primitive drawing section
   }

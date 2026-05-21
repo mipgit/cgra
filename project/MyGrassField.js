@@ -55,7 +55,8 @@ export class MyGrassField extends CGFobject {
                 tz    = -vx * sinRot + vz * cosRot;
                 vx = tx; vz = tz;
 
-                this.vertices.push(vx + x, vy - 0.5, vz + z);
+                // Y offset comes from the heightmap in grass.vert at draw time
+                this.vertices.push(vx + x, vy, vz + z);
                 // normals.y encodes normalized local height (0=base, 1=tip) — used by shader for wind tip factor
                 this.normals.push(0, tv[v*3+1] / 1.4, 0);
                 this.texCoords.push(0.5, 0.5);
