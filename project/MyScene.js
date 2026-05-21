@@ -184,17 +184,17 @@ export class MyScene extends CGFscene {
       const petalHues = pickHues(pastelPalette, 2, 4);
       const bloomHues = pickHues(bloomPalette, 1, 2);
       if (archetype < 0.4) {
-        // Daisy-like — sits in-canopy / just at the tip line
+        // Daisy-like
         return { petalHues, bloomHues,
-          baseSizeLo: 0.28, baseSizeHi: 0.42,
+          baseSizeLo: 0.65, baseSizeHi: 0.90,
           petalRatio: 0.38, bloomRatio: 0.30, leafRatio: 0.50,
           petalCountLo: 10, petalCountHi: 14,
           petalTiltLo: 0.18, petalTiltHi: 0.36,
           doubleRingChance: 0.15 };
       } else if (archetype < 0.75) {
-        // Lush bloom — slightly above canopy, proportionally larger petals & centre
+        // Lush bloom — proportionally larger petals & centre
         return { petalHues, bloomHues,
-          baseSizeLo: 0.34, baseSizeHi: 0.46,
+          baseSizeLo: 0.80, baseSizeHi: 1.15,
           petalRatio: 0.46, bloomRatio: 0.32, leafRatio: 0.56,
           petalCountLo: 7, petalCountHi: 10,
           petalTiltLo: 0.30, petalTiltHi: 0.50,
@@ -202,7 +202,7 @@ export class MyScene extends CGFscene {
       } else {
         // Tulip-like — few cupped petals, no bloom centre (they cup-close naturally)
         return { petalHues, bloomHues,
-          baseSizeLo: 0.32, baseSizeHi: 0.44,
+          baseSizeLo: 0.75, baseSizeHi: 1.05,
           petalRatio: 0.42, bloomRatio: 0.0, leafRatio: 0.52,
           petalCountLo: 5, petalCountHi: 8,
           petalTiltLo: 0.55, petalTiltHi: 0.80,
@@ -219,14 +219,15 @@ export class MyScene extends CGFscene {
       return Math.abs(v - (0.5 + Math.sin(u * pf) * pa)) < pw;
     };
 
-    // Distance falloff: individual blades alias into noise at distance and look worse than
-    // the bare terrain texture, so we cull beyond 70 and thin out between 40 and 70.
-    const DETAIL_FULL = 40, DETAIL_FADE = 70;
+    // Density falloff: full density inside DETAIL_FULL, thins down to a minimum density
+    // at the meadow edge so the whole terrain stays covered without ever going bare.
+    const DETAIL_FULL = 60, DETAIL_EDGE = 110, MIN_DENSITY = 0.35;
     const tooFar = (x, z) => {
       const d = Math.sqrt(x*x + z*z);
-      if (d > DETAIL_FADE) return true;
-      if (d > DETAIL_FULL) return Math.random() < (d - DETAIL_FULL) / (DETAIL_FADE - DETAIL_FULL);
-      return false;
+      if (d <= DETAIL_FULL) return false;
+      const t = Math.min(1, (d - DETAIL_FULL) / (DETAIL_EDGE - DETAIL_FULL));
+      const density = 1.0 - t * (1.0 - MIN_DENSITY);
+      return Math.random() > density;
     };
 
     this.flowerInstances = [];
@@ -236,21 +237,21 @@ export class MyScene extends CGFscene {
       const sp = makeSpecies();
       for (let f = 0; f < randi(10, 14); f++) {
         const fl = makeFlower(0, 0, 2.5, sp);
-        if (!onPath(fl.x, fl.z)) this.flowerInstances.push(fl);
+        if (!onPath(fl.x, fl.z) && !tooFar(fl.x, fl.z)) this.flowerInstances.push(fl);
       }
     }
 
-    // Scattered patches across the field — each patch is one species
-    const patchCount = 60;
+    // Scattered patches across the full meadow extent
+    const patchCount = 90;
     for (let p = 0; p < patchCount; p++) {
-      const pcx = rand(-90, 90);
-      const pcz = rand(-90, 90);
-      if (onPath(pcx, pcz)) continue;     // skip patches whose centre is on the path
+      const pcx = rand(-DETAIL_EDGE, DETAIL_EDGE);
+      const pcz = rand(-DETAIL_EDGE, DETAIL_EDGE);
+      if (onPath(pcx, pcz) || tooFar(pcx, pcz)) continue;
       const sp  = makeSpecies();
-      const flowersInPatch = randi(12, 24);
+      const flowersInPatch = randi(10, 22);
       for (let f = 0; f < flowersInPatch; f++) {
-        const fl = makeFlower(pcx, pcz, rand(2.8, 4.5), sp);
-        if (!onPath(fl.x, fl.z)) this.flowerInstances.push(fl);
+        const fl = makeFlower(pcx, pcz, rand(3.0, 5.5), sp);
+        if (!onPath(fl.x, fl.z) && !tooFar(fl.x, fl.z)) this.flowerInstances.push(fl);
       }
     }
 
@@ -304,22 +305,19 @@ export class MyScene extends CGFscene {
     for (let i = 0; i < this.flowerInstances.length; i += FLOWER_CHUNK)
         this.flowerFields.push(new MyFlowerField(this, this.flowerInstances.slice(i, i + FLOWER_CHUNK)));
 
-    // Green grass — covers the detail radius around the camera, skips path + distant areas.
-    // Beyond the radius the terrain texture reads as grass on its own, so individual blades
-    // would just alias into noise.
+    // Green grass — covers the full meadow extent; tooFar() thins density toward the edge
     const greenPositions = [];
     const gridStep = 2;
-    const gridRange = 90;
-    for (let gx = -gridRange; gx <= gridRange; gx += gridStep) {
-        for (let gz = -gridRange; gz <= gridRange; gz += gridStep) {
+    for (let gx = -DETAIL_EDGE; gx <= DETAIL_EDGE; gx += gridStep) {
+        for (let gz = -DETAIL_EDGE; gz <= DETAIL_EDGE; gz += gridStep) {
             const cx = gx + (Math.random() - 0.5) * gridStep * 0.6;
             const cz = gz + (Math.random() - 0.5) * gridStep * 0.6;
-            for (let i = 0; i < 60; i++) {
+            for (let i = 0; i < 80; i++) {
                 const angle = Math.random() * Math.PI * 2;
                 const r = Math.sqrt(Math.random()) * 2.2;
                 const x = cx + Math.cos(angle) * r;
                 const z = cz + Math.sin(angle) * r;
-                if (onPath(x, z)) continue;
+                if (onPath(x, z) || tooFar(x, z)) continue;
                 greenPositions.push({
                     x, z,
                     rot: Math.random() * Math.PI * 2,
@@ -331,19 +329,19 @@ export class MyScene extends CGFscene {
     }
     this.grassFields = makeFields(greenPositions);
 
-    // Dead grass — sparse scattered patches, also skipping the path
+    // Dead grass — sparse scattered patches, same path + distance filters
     const deadPositions = [];
-    for (let i = 0; i < 30; i++) {
-        const pcx = (Math.random() - 0.5) * 170;
-        const pcz = (Math.random() - 0.5) * 170;
-        if (onPath(pcx, pcz)) continue;
+    for (let i = 0; i < 18; i++) {
+        const pcx = (Math.random() - 0.5) * 2 * DETAIL_EDGE;
+        const pcz = (Math.random() - 0.5) * 2 * DETAIL_EDGE;
+        if (onPath(pcx, pcz) || tooFar(pcx, pcz)) continue;
         const count = 25 + Math.floor(Math.random() * 30);
         for (let j = 0; j < count; j++) {
             const angle = Math.random() * Math.PI * 2;
             const r = Math.sqrt(Math.random()) * 3.5;
             const x = pcx + Math.cos(angle) * r;
             const z = pcz + Math.sin(angle) * r;
-            if (onPath(x, z)) continue;
+            if (onPath(x, z) || tooFar(x, z)) continue;
             deadPositions.push({
                 x, z,
                 rot: Math.random() * Math.PI * 2,

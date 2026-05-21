@@ -15,7 +15,11 @@ uniform float uPathWaveFrequency;
 out vec4 fragColor;
 
 void main() {
-    vec3 base = texture(uSampler, vTexCoord).rgb;
+    // Tile the grass texture much finer than 1:1 across the plane so it reads as grass
+    // on the distant slopes instead of one washed-out smear. Heightmap and path keep
+    // using the original UV below.
+    vec3 base = texture(uSampler, vTexCoord * 20.0).rgb;
+    vec3 pathTexel = texture(uPathTexture, vTexCoord * 20.0).rgb;
 
     vec2 texel = max(uTexelSize, vec2(1.0 / 1024.0));
 
@@ -46,7 +50,6 @@ void main() {
     float distFromPath = abs(vTexCoord.y - pathCenterY);
     float pathMask = step(distFromPath, uPathWidth);
     
-    vec3 pathTexel = texture(uPathTexture, vTexCoord).rgb;
     vec3 finalColor = mix(base, pathTexel, pathMask);
 
     fragColor = vec4(finalColor * shade, 1.0);
