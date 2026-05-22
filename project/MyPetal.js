@@ -1,8 +1,16 @@
 import {CGFobject} from '../lib/CGF.js';
 
 export class MyPetal extends CGFobject {
-    constructor(scene) {
+lik    constructor(scene, profile = {}) {
         super(scene);
+        this.profile = {
+            widthAmp:   0.34,   // max half-width
+            widthPow:   0.80,   // inside sin(): >1 = pointed, <1 = blunt/broad
+            widthShape: 0.65,   // outer exponent: <1 = puffier, >1 = thinner
+            cupAmp:     0.14,   // forward cup near base
+            curlAmount: 0.09,   // tip arcs back (t^3 coefficient); negative = curls forward
+            ...profile,
+        };
         this.initBuffers();
     }
 
@@ -10,11 +18,10 @@ export class MyPetal extends CGFobject {
         const T = 0.007;          // half-thickness
         const ROWS = 10;
         const TIP_Y = 0.90;
+        const P = this.profile;
 
-        // Teardrop silhouette: rounded bell, peak slightly past the middle
-        const widthAt = t => 0.34 * Math.pow(Math.sin(Math.PI * Math.pow(t, 0.80)), 0.65);
-        // Z curve: forward cup near the base, tip flares backward (t³ term)
-        const cupAt = t => 0.14 * Math.sin(Math.PI * Math.pow(t, 0.95)) - 0.09 * t * t * t;
+        const widthAt = t => P.widthAmp * Math.pow(Math.sin(Math.PI * Math.pow(t, P.widthPow)), P.widthShape);
+        const cupAt   = t => P.cupAmp * Math.sin(Math.PI * Math.pow(t, 0.95)) - P.curlAmount * t * t * t;
 
         const rawV = [], rawTex = [];
         rawV.push(0, 0, 0);

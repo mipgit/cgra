@@ -3,6 +3,7 @@ import { MySphere } from "./MySphere.js";
 import { MyPlane } from "./MyPlane.js";
 import { MyGrassField } from "./MyGrassField.js";
 import { MyFlowerField } from "./MyFlowerField.js";
+import { MyGameController } from "./MyGameController.js";
 
 /**
  * MyScene
@@ -146,12 +147,25 @@ export class MyScene extends CGFscene {
 
       const ringCount = (Math.random() < species.doubleRingChance) ? 2 : 1;
 
+      const sp = species.petalProfile;
+      const qStep = 0.02;
+      const q = (v) => Math.round(v / qStep) * qStep;
+      const petalProfile = {
+          widthAmp:   q(sp.widthAmp   * (1.0 + (Math.random() - 0.5) * 0.16)),
+          widthPow:   q(sp.widthPow   * (1.0 + (Math.random() - 0.5) * 0.14)),
+          widthShape: sp.widthShape,
+          cupAmp:     q(sp.cupAmp     + (Math.random() - 0.5) * 0.06),
+          curlAmount: q(sp.curlAmount + (Math.random() - 0.5) * 0.06),
+      };
+
       return {
         x:        pcx + Math.cos(angle) * r,
         z:        pcz + Math.sin(angle) * r,
         rot:      Math.random() * Math.PI * 2,
         tiltX:    (Math.random() - 0.5) * 0.4,
         tiltZ:    (Math.random() - 0.5) * 0.4,
+        speciesId:    species.id,
+        petalProfile,
         params: {
           stemHeight,
           leafCount:   randi(2, 4),
@@ -184,24 +198,27 @@ export class MyScene extends CGFscene {
       const petalHues = pickHues(pastelPalette, 2, 4);
       const bloomHues = pickHues(bloomPalette, 1, 2);
       if (archetype < 0.4) {
-        // Daisy-like
-        return { petalHues, bloomHues,
+        // Daisy-like — narrow pointed petals
+        return { id: 'daisy', petalHues, bloomHues,
+          petalProfile: { widthAmp: 0.28, widthPow: 1.30, widthShape: 0.55, cupAmp: 0.05, curlAmount: 0.02 },
           baseSizeLo: 0.65, baseSizeHi: 0.90,
           petalRatio: 0.38, bloomRatio: 0.30, leafRatio: 0.50,
           petalCountLo: 10, petalCountHi: 14,
           petalTiltLo: 0.18, petalTiltHi: 0.36,
           doubleRingChance: 0.15 };
       } else if (archetype < 0.75) {
-        // Lush bloom — proportionally larger petals & centre
-        return { petalHues, bloomHues,
+        // Lush bloom — wide round petals, slight cup
+        return { id: 'lush', petalHues, bloomHues,
+          petalProfile: { widthAmp: 0.42, widthPow: 0.70, widthShape: 0.85, cupAmp: 0.18, curlAmount: 0.06 },
           baseSizeLo: 0.80, baseSizeHi: 1.15,
           petalRatio: 0.46, bloomRatio: 0.32, leafRatio: 0.56,
           petalCountLo: 7, petalCountHi: 10,
           petalTiltLo: 0.30, petalTiltHi: 0.50,
           doubleRingChance: 0.30 };
       } else {
-        // Tulip-like — few cupped petals, no bloom centre (they cup-close naturally)
-        return { petalHues, bloomHues,
+        // Tulip-like — cupped petals that curl forward (negative curlAmount)
+        return { id: 'tulip', petalHues, bloomHues,
+          petalProfile: { widthAmp: 0.34, widthPow: 1.00, widthShape: 0.70, cupAmp: 0.28, curlAmount: -0.04 },
           baseSizeLo: 0.75, baseSizeHi: 1.05,
           petalRatio: 0.42, bloomRatio: 0.0, leafRatio: 0.52,
           petalCountLo: 5, petalCountHi: 8,
@@ -218,6 +235,8 @@ export class MyScene extends CGFscene {
       const v = (z + 100) / 200;
       return Math.abs(v - (0.5 + Math.sin(u * pf) * pa)) < pw;
     };
+    // Expose for the game controller so spawned rocks/bales/barn dodge the road
+    this.onPath = onPath;
 
     // Density falloff: full density inside DETAIL_FULL, thins down to a minimum density
     // at the meadow edge so the whole terrain stays covered without ever going bare.
@@ -354,6 +373,23 @@ export class MyScene extends CGFscene {
 
     //Objects connected to MyInterface
     this.displayAxis = true;
+
+    // Game controller (wagon + input + state). Must come last so the
+    // heightmap URL matches the textures path used above.
+    this.controller = new MyGameController(this, {
+      heightScale: 7.0,
+      terrainHalfExtent: 100.0,
+      heightmapUrl: 'textures/heightmap.png',
+    });
+    this.setUpdatePeriod(1000 / 60);
+    this._lastT = null;
+  }
+
+  update(t) {
+    if (this._lastT == null) { this._lastT = t; return; }
+    const dt = Math.min(0.1, (t - this._lastT) / 1000);
+    this._lastT = t;
+    if (this.controller) this.controller.update(dt);
   }
 
   initLights() {
@@ -492,6 +528,12 @@ export class MyScene extends CGFscene {
     for (const f of this.flowerFields) f.display();
     this.setActiveShader(this.defaultShader);
     this.gl.enable(this.gl.CULL_FACE);
+
+    // Game controller (wagon for now; bales/rocks/barn/arrows later)
+    if (this.controller) {
+      this.setActiveShader(this.defaultShader);
+      this.controller.display();
+    }
 
     // ---- END Primitive drawing section
   }

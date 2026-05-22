@@ -15,8 +15,10 @@ export class MyFlowerField extends CGFobject {
         // Shared low-poly templates
         this.stemTpl  = new MyStem(scene, 6, 4);
         this.leafTpl  = new MyLeaf(scene);
-        this.petalTpl = new MyPetal(scene);
         this.bloomTpl = new MySphere(scene, 8, 5, false);
+
+        // Per-species petal templates, built lazily so each species gets a distinct silhouette
+        this.petalTpls = new Map();
 
         this.sunDir = normalize([0.3, 0.95, 0.25]);
         this.initBuffers();
@@ -107,7 +109,7 @@ export class MyFlowerField extends CGFobject {
                 const xRot     = -(Math.PI/2 - (p.petalTilt + extraTilt) + tiltJit);
                 const M = mulM3(rotY(azimuth), mulM3(rotX(xRot), rotZ(rollJit)));
 
-                this._bakePart(this.petalTpl, {
+                this._bakePart(this._petalTplFor(inst), {
                     xform: (v) => {
                         const s = [v[0]*sc, v[1]*sc + petalOff, v[2]*sc];
                         const r = applyM3(M, s);
@@ -134,9 +136,22 @@ export class MyFlowerField extends CGFobject {
             this._bakePart(this.bloomTpl, {
                 xform: (v) => [v[0] * br, v[1] * br * flatness + discY, v[2] * br],
                 normalXform: (n) => n,
-                R, fx, fz, sh, color: bloomHue,
+                R, fx, fz, sh, color: bloomHue, bloomTag: true,
             });
         }
+    }
+
+    _petalTplFor(inst) {
+        const p = inst.petalProfile || {};
+        // Key on quantized profile so flowers with the same silhouette bucket share a mesh.
+        // Profile fields are already quantized in MyScene.makeFlower → small set of templates.
+        const key = `${inst.speciesId || 'default'}:${p.widthAmp}:${p.widthPow}:${p.cupAmp}:${p.curlAmount}`;
+        let tpl = this.petalTpls.get(key);
+        if (!tpl) {
+            tpl = new MyPetal(this.scene, inst.petalProfile);
+            this.petalTpls.set(key, tpl);
+        }
+        return tpl;
     }
 
     // Walk a template mesh, apply part + flower transforms, write vertices into the field
@@ -145,7 +160,7 @@ export class MyFlowerField extends CGFobject {
         const tv = template.vertices, tn = template.normals, ti = template.indices;
         const ttc = template.texCoords;
         const base = this.vertices.length / 3;
-        const { xform, normalXform, R, fx, fz, sh, color, textured } = ctx;
+        const { xform, normalXform, R, fx, fz, sh, color, textured, bloomTag } = ctx;
 
         for (let i = 0; i < tv.length; i += 3) {
             const localV = [tv[i], tv[i+1], tv[i+2]];
@@ -173,6 +188,11 @@ export class MyFlowerField extends CGFobject {
             if (textured) {
                 const k = (i / 3) * 2;
                 this.texCoords.push(ttc[k], ttc[k + 1]);
+            } else if (bloomTag) {
+                // Encode the bloom-local XZ into texCoord (offset by +10 so the shader can
+                // distinguish bloom from petal/stem). Template is a unit sphere, so localV[0],
+                // localV[2] are already in [-1, 1] — perfect for a disc-floret domain.
+                this.texCoords.push(10.0 + localV[0], 10.0 + localV[2]);
             } else {
                 this.texCoords.push(-1, -1);
             }
