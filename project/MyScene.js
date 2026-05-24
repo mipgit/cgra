@@ -4,6 +4,8 @@ import { MyPlane } from "./MyPlane.js";
 import { MyGrassField } from "./MyGrassField.js";
 import { MyFlowerField } from "./MyFlowerField.js";
 import { MyGameController } from "./MyGameController.js";
+import { MyGrass } from "./MyGrass.js";
+import { MyRock } from "./MyRock.js";
 
 /**
  * MyScene
@@ -122,6 +124,21 @@ export class MyScene extends CGFscene {
     const rand = (lo, hi) => lo + Math.random() * (hi - lo);
     const randi = (lo, hi) => lo + Math.floor(Math.random() * (hi - lo + 1));
     const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+    this.grass = new MyGrass(this);
+    // simple cube from tp4 for debugging (no textures)
+    this.testRock = new MyRock(this, [3, 0, 0], 1.0);
+    this.rockAppearance = new CGFappearance(this);
+    this.rockAppearance.setAmbient(0.25, 0.25, 0.25, 1);
+    this.rockAppearance.setDiffuse(0.6, 0.6, 0.6, 1);
+    this.rockAppearance.setSpecular(0.08, 0.08, 0.08, 1);
+    this.rockAppearance.setEmission(0, 0, 0, 1);
+    this.rockAppearance.setShininess(8);
+    this.pinkGrassAppearance = new CGFappearance(this);
+    this.pinkGrassAppearance.setAmbient(0.9, 0.4, 0.6, 1);
+    this.pinkGrassAppearance.setDiffuse(1.0, 0.5, 0.7, 1);
+    this.pinkGrassAppearance.setSpecular(0, 0, 0, 1);
+    this.pinkGrassAppearance.setEmission(0, 0, 0, 1);
+    this.pinkGrassAppearance.setShininess(5);
 
     // Each flower derives stem / petal / bloom / leaf from one baseSize using species ratios,
     // so a flower's parts stay proportional. baseSize stays close to grass tip height (~0.53)
@@ -458,6 +475,13 @@ export class MyScene extends CGFscene {
 
     // Draw axis
     if (this.displayAxis) this.axis.display();
+
+    // Debug: draw rock at ground reference
+    this.pushMatrix();
+    this.translate(0, -3.3, 0);
+    this.rockAppearance.apply();
+    this.testRock.display();
+    this.popMatrix();
 
     
     // ---- BEGIN Primitive drawing section
