@@ -3,6 +3,9 @@ import { MySphere } from "./MySphere.js";
 import { MyPlane } from "./MyPlane.js";
 import { MyGrassField } from "./MyGrassField.js";
 import { MyFlowerField } from "./MyFlowerField.js";
+import { MyWagon } from "./MyWagon.js";
+import { CGFobjModel } from "../lib/extra/CGFobjModel.js";
+
 
 /**
  * MyScene
@@ -33,6 +36,7 @@ export class MyScene extends CGFscene {
     this.axis = new CGFaxis(this);
     this.sphere = new MySphere(this, 50, 50);
     this.terrain = new MyPlane(this, 100);
+    this.wagon = new MyWagon(this);
     
     // Load all sky textures
     this.textures = {
@@ -352,6 +356,8 @@ export class MyScene extends CGFscene {
     }
     this.deadGrassFields = makeFields(deadPositions);
 
+
+
     //Objects connected to MyInterface
     this.displayAxis = true;
   }
@@ -492,6 +498,9 @@ export class MyScene extends CGFscene {
     for (const f of this.flowerFields) f.display();
     this.setActiveShader(this.defaultShader);
     this.gl.enable(this.gl.CULL_FACE);
+
+    this.wagon.display();
+
 
     // ---- END Primitive drawing section
   }
