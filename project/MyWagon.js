@@ -1,12 +1,14 @@
 import { CGFobject, CGFappearance, CGFtexture } from "../lib/CGF.js";
 import { MyUnitCubeQuad } from "./MyUnitCubeQuad.js";
 import { MyWagonWheel } from "./MyWagonWheel.js";
+import { MyHalfCylinder } from "./MyHalfCylinder.js";
 
 export class MyWagon extends CGFobject {
     constructor(scene) {
         super(scene);
         this.box = new MyUnitCubeQuad(scene);
         this.wheel = new MyWagonWheel(scene);
+        this.halfCylinder = new MyHalfCylinder(scene, 6, 1);
 
         this.initMaterials(); 
     }
@@ -143,19 +145,28 @@ export class MyWagon extends CGFobject {
         for (let i = 0; i < numSegments; i++) {
             let angle = -Math.PI / 2 + (i + 0.5) * archAngleStep;
             
-            // Cloth Panel
-            this.scene.pushMatrix();
-            this.scene.translate(coverX, 2.6 + coverRadius * Math.cos(angle), -coverRadius * Math.sin(angle));
-            this.scene.rotate(-angle, 1, 0, 0); // Rotate around X
-            this.scene.scale(coverLength, 0.12, panelWidth);
+            // Cloth Panel (undulating between ribs)
             this.clothMaterial.apply();
-            this.box.display();
-            this.scene.popMatrix();
+            let numRibs = 3;
+            let spanLen = coverLength / (numRibs - 1);
+            let sagAmount = 0.15; // depth of the sag
+
+            for(let j = 0; j < numRibs - 1; j++) {
+                let spanCenterX = coverX - coverLength/2 + spanLen/2 + j*spanLen;
+                
+                this.scene.pushMatrix();
+                this.scene.translate(spanCenterX, 2.6 + coverRadius * Math.cos(angle), -coverRadius * Math.sin(angle));
+                this.scene.rotate(-angle, 1, 0, 0); 
+                // x from -1 to 1, y from 0 to -1, z from -0.5 to 0.5
+                this.scene.scale(spanLen / 2, sagAmount, panelWidth);
+                this.halfCylinder.display();
+                this.scene.popMatrix();
+            }
 
             // Wooden arch support ribs
             this.woodMaterial.apply();
             
-            let numRibs = 3;
+            //let numRibs = 3;
             for(let j = 0; j < numRibs; j++) {
                 let ribX = coverX - coverLength/2 + j*(coverLength/(numRibs-1));
                 this.scene.pushMatrix();
