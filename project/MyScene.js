@@ -6,6 +6,7 @@ import { MyFlowerField } from "./MyFlowerField.js";
 import { MyGameController } from "./MyGameController.js";
 import { MyGrass } from "./MyGrass.js";
 import { MyRock } from "./MyRock.js";
+import { MyTree } from "./MyTree.js";
 
 /**
  * MyScene
@@ -127,6 +128,7 @@ export class MyScene extends CGFscene {
     this.grass = new MyGrass(this);
     // simple cube from tp4 for debugging (no textures)
     this.testRock = new MyRock(this, [3, 0, 0], 1.0);
+    this.tree = new MyTree(this);
     this.rockAppearance = new CGFappearance(this);
     this.rockAppearance.setAmbient(0.25, 0.25, 0.25, 1);
     this.rockAppearance.setDiffuse(0.6, 0.6, 0.6, 1);
@@ -523,13 +525,18 @@ export class MyScene extends CGFscene {
     this.terrainAppearance.apply();
     this.terrain.display();
 
+    this.popMatrix();
+
     this.setActiveShader(this.defaultShader);
+
+    // tree in world space so it stays upright
+    this.pushMatrix();
+    this.translate(-2, -3.5, -2);
+    this.tree.display();
+    this.popMatrix();
 
     
  
-    
-    this.popMatrix();   // pops the terrain matrix
-
     // Grass — sample the same heightmap as the terrain so blades sit on the displaced ground
     const now = performance.now() / 1000.0;
     this.heightmapTexture.bind(1);
