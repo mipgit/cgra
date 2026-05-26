@@ -1,4 +1,4 @@
-import { CGFobject, CGFappearance } from "../lib/CGF.js";
+import { CGFobject, CGFappearance, CGFtexture } from "../lib/CGF.js";
 import { MyUnitCubeQuad } from "./MyUnitCubeQuad.js";
 import { MyWagonWheel } from "./MyWagonWheel.js";
 
@@ -8,21 +8,24 @@ export class MyWagon extends CGFobject {
         this.box = new MyUnitCubeQuad(scene);
         this.wheel = new MyWagonWheel(scene);
 
-        this.initMaterials();
+        this.initMaterials(); 
     }
 
     initMaterials() {
         this.woodMaterial = new CGFappearance(this.scene);
         this.woodMaterial.setAmbient(0.4, 0.25, 0.1, 1.0);
         this.woodMaterial.setDiffuse(0.6, 0.35, 0.15, 1.0);
-        this.woodMaterial.setSpecular(0.1, 0.1, 0.1, 1.0);
-        this.woodMaterial.setShininess(10.0);
+        //this.woodMaterial.setSpecular(0.1, 0.1, 0.1, 0.1);
+        //this.woodMaterial.setShininess(10.0);
 
         this.clothMaterial = new CGFappearance(this.scene);
         this.clothMaterial.setAmbient(0.8, 0.8, 0.8, 1.0);
         this.clothMaterial.setDiffuse(0.9, 0.9, 0.9, 1.0);
         this.clothMaterial.setSpecular(0.1, 0.1, 0.1, 1.0);
         this.clothMaterial.setShininess(10.0);
+
+        this.woodTexture = new CGFtexture(this, "textures/wood.jpg");
+        this.woodMaterial.setTexture(this.woodTexture);
     }
 
     display() {

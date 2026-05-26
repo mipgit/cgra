@@ -1,13 +1,14 @@
 import { CGFobject } from "../lib/CGF.js";
 import { MyUnitCubeQuad } from "./MyUnitCubeQuad.js";
 import { MyCylinder } from "./MyCylinder.js";
+import { MyHollowCylinder } from "./MyHollowCylinder.js";
 
 export class MyWagonWheel extends CGFobject {
     constructor(scene) {
         super(scene);
         this.box = new MyUnitCubeQuad(scene);
         this.hub = new MyCylinder(scene, 12, 1);
-        this.rim = new MyCylinder(scene, 16, 1);
+        this.rim = new MyHollowCylinder(scene, 16, 1, 0.85, 1.0);
     }
 
     display() {
@@ -20,7 +21,7 @@ export class MyWagonWheel extends CGFobject {
         this.hub.display();
         this.scene.popMatrix();
 
-        // Rim 
+        // Rim
         this.scene.pushMatrix();
         this.scene.scale(1.51, 1.51, 0.5); 
         this.scene.translate(0, 0, -0.5); // Center it
