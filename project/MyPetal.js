@@ -1,7 +1,7 @@
 import {CGFobject} from '../lib/CGF.js';
 
 export class MyPetal extends CGFobject {
-lik    constructor(scene, profile = {}) {
+    constructor(scene, profile = {}) {
         super(scene);
         this.profile = {
             widthAmp:   0.34,   // max half-width
