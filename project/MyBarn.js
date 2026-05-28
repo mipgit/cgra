@@ -57,7 +57,7 @@ export class MyBarn extends CGFobject {
         const s = this.scene; 
 
         const width = 4.0 * this.scale;
-        const height = 2.5 * this.scale;
+        const height = 2.2 * this.scale;
         const depth = 5.0 * this.scale;
         const roofHeight = 2.0 * this.scale;
         const trimSize = 0.15 * this.scale; 
@@ -70,10 +70,59 @@ export class MyBarn extends CGFobject {
         // ==========================================
         // 1. CORPO PRINCIPAL (Cubo sólido vermelho)
         // ==========================================
+        this.redMat.apply();
+        
+        const wallT = 0.05 * this.scale; // Espessura da parede (fina)
+        
+        // 1.1 Parede Traseira
         this.scene.pushMatrix();
-            this.scene.translate(0, height / 2, 0);
-            this.scene.scale(width, height, depth);
-            this.redMat.apply();
+            this.scene.translate(0, height / 2, -depth / 2 + wallT / 2);
+            this.scene.scale(width, height, wallT);
+            this.cube.display();
+        this.scene.popMatrix();
+
+        // 1.2 Parede Lateral Esquerda
+        this.scene.pushMatrix();
+            this.scene.translate(-width / 2 + wallT / 2, height / 2, 0);
+            // depth - wallT*2 para não sobrepor aos cantos da frente/trás
+            this.scene.scale(wallT, height, depth - wallT * 2); 
+            this.cube.display();
+        this.scene.popMatrix();
+
+        // 1.3 Parede Lateral Direita
+        this.scene.pushMatrix();
+            this.scene.translate(width / 2 - wallT / 2, height / 2, 0);
+            this.scene.scale(wallT, height, depth - wallT * 2);
+            this.cube.display();
+        this.scene.popMatrix();
+
+        // --- PAREDE FRONTAL DIVIDIDA EM 3 (Para deixar o buraco da porta) ---
+        
+        // A porta ocupa 42% da largura frontal
+        const doorW = width * 0.42; 
+        const doorH = height * 0.75; // Altura da porta (75% da parede)
+        
+        const sidePanelW = (width - doorW) / 2; // O que sobra para cada lado
+        const topPanelH = height - doorH;       // O que sobra por cima da porta
+
+        // 1.4 Painel Frontal Esquerdo
+        this.scene.pushMatrix();
+            this.scene.translate(-width / 2 + sidePanelW / 2, height / 2, depth / 2 - wallT / 2);
+            this.scene.scale(sidePanelW, height, wallT);
+            this.cube.display();
+        this.scene.popMatrix();
+
+        // 1.5 Painel Frontal Direito
+        this.scene.pushMatrix();
+            this.scene.translate(width / 2 - sidePanelW / 2, height / 2, depth / 2 - wallT / 2);
+            this.scene.scale(sidePanelW, height, wallT);
+            this.cube.display();
+        this.scene.popMatrix();
+
+        // 1.6 Painel Frontal Topo (Por cima da porta)
+        this.scene.pushMatrix();
+            this.scene.translate(0, doorH + topPanelH / 2, depth / 2 - wallT / 2);
+            this.scene.scale(doorW, topPanelH, wallT);
             this.cube.display();
         this.scene.popMatrix();
 
@@ -191,6 +240,7 @@ export class MyBarn extends CGFobject {
             this.roof.display();
         this.scene.popMatrix();
 
+
         // ==========================================
         // 4.1 VIGAS VERTICAIS CORE
         // ==========================================
@@ -274,6 +324,36 @@ export class MyBarn extends CGFobject {
             this.scene.scale(trimSize, trimSize, depth + trimSize * 2);
             this.cube.display();
         this.scene.popMatrix();
+
+
+        // ==========================================
+        // 4.4 VIGAS VERTICAIS DA PORTA
+        // ==========================================
+        this.whiteMat.apply();
+        
+        // APAGAR A LINHA: const doorW = width * 0.38; (Já existe na secção 1)
+        
+        // O X exato onde a viga branca toca na borda da porta
+        const doorBeamX = doorW / 2 + trimSize / 2;
+        // O Z para ficar saliente (alinhado com as outras vigas)
+        const doorBeamZ = depth / 2 + trimSize / 2;
+
+        // Viga vertical esquerda da porta
+        this.scene.pushMatrix();
+            // Vai desde o chão até à viga horizontal do topo (height)
+            this.scene.translate(-doorBeamX, height / 2, doorBeamZ);
+            this.scene.scale(trimSize, height, trimSize);
+            this.cube.display();
+        this.scene.popMatrix();
+
+        // Viga vertical direita da porta
+        this.scene.pushMatrix();
+            this.scene.translate(doorBeamX, height / 2, doorBeamZ);
+            this.scene.scale(trimSize, height, trimSize);
+            this.cube.display();
+        this.scene.popMatrix();
+
+
 
         // ==========================================
         // 5. JANELA 
