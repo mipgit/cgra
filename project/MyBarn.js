@@ -34,9 +34,9 @@ export class MyBarn extends CGFobject {
         this.roofMat.setDiffuse(0.3, 0.3, 0.3, 1);
 
         this.glassMat = new CGFappearance(scene);
-        this.glassMat.setAmbient(0.3, 0.5, 0.7, 1.0);  
-        this.glassMat.setDiffuse(0.4, 0.7, 0.9, 1.0);  
-        this.glassMat.setSpecular(0.8, 0.9, 1.0, 1.0); 
+        this.glassMat.setAmbient(0.3, 0.5, 0.7, 1.0);  // Fundo azul mais claro
+        this.glassMat.setDiffuse(0.4, 0.7, 0.9, 1.0);  // Reflexão da luz difusa
+        this.glassMat.setSpecular(0.8, 0.9, 1.0, 1.0); // Reflexo branco/azulado
         this.glassMat.setShininess(50);
 
         // --- MATERIAIS DO ANEL---
@@ -56,8 +56,8 @@ export class MyBarn extends CGFobject {
     display() {
         const s = this.scene; 
 
-        const width = 5.0 * this.scale;
-        const height = 3.5 * this.scale;
+        const width = 4.0 * this.scale;
+        const height = 2.5 * this.scale;
         const depth = 5.0 * this.scale;
         const roofHeight = 2.0 * this.scale;
         const trimSize = 0.15 * this.scale; 
@@ -96,6 +96,90 @@ export class MyBarn extends CGFobject {
             this.scene.scale(width, roofHeight, 1);
             this.gable.display();
         this.scene.popMatrix();
+
+
+        // ==========================================
+        // 2.1 VIGAS DA EMPENA FRONTAL (Moldura da Janela)
+        // ==========================================
+        this.whiteMat.apply();
+        
+        const breakY = height + roofHeight * 0.7; // Altura onde o telhado quebra
+        const gableZ = depth / 2 + trimSize / 2;
+        
+        // 1. Viga Horizontal Superior (na quebra)
+        this.scene.pushMatrix();
+            this.scene.translate(0, breakY, gableZ);
+            // Na sua classe MyGable, a largura neste ponto é 70% da largura total (xMid = 0.35 * 2)
+            this.scene.scale(width * 0.7 + trimSize, trimSize, trimSize);
+            this.cube.display();
+        this.scene.popMatrix();
+
+        // 2. Duas Vigas Verticais (a emoldurar a janela)
+        const vBeamHeight = roofHeight * 0.7; // Distância entre a base da empena e a quebra
+        const vBeamY = height + vBeamHeight / 2; // Ponto central destas vigas verticais
+        const vBeamXOffset = 0.7 * this.scale; // Afastamento do centro para deixar espaço para a janela
+
+        // Viga Vertical Esquerda
+        this.scene.pushMatrix();
+            this.scene.translate(-vBeamXOffset, vBeamY, gableZ);
+            this.scene.scale(trimSize, vBeamHeight, trimSize);
+            this.cube.display();
+        this.scene.popMatrix();
+
+        // Viga Vertical Direita
+        this.scene.pushMatrix();
+            this.scene.translate(vBeamXOffset, vBeamY, gableZ);
+            this.scene.scale(trimSize, vBeamHeight, trimSize);
+            this.cube.display();
+        this.scene.popMatrix();
+
+
+        // ==========================================
+        // 2.2 VIGAS DIAGONAIS DA EMPENA
+        // ==========================================
+        
+        // Ponto A (Fundo: onde começa a viga vertical)
+        const diagBottomX = vBeamXOffset; 
+        const diagBottomY = height;
+        
+        // Ponto B (Topo: a ponta "Mid" da quebra do telhado)
+        // No MyGable, o xMid é 0.35, então a largura real é width * 0.35
+        const diagTopX = width * 0.35; 
+        const diagTopY = breakY; 
+        
+        // Distâncias entre os pontos
+        const dx = diagTopX - diagBottomX;
+        const dy = diagTopY - diagBottomY;
+        
+        // Teorema de Pitágoras para saber o comprimento exato da viga
+        const diagLength = Math.sqrt(dx * dx + dy * dy);
+        // Arco-tangente para saber o ângulo de inclinação
+        const diagAngle = Math.atan2(dy, dx);
+        
+        // Ponto central exato onde vamos colocar o cubo antes de o rodar
+        const diagCenterX = diagBottomX + dx / 2;
+        const diagCenterY = diagBottomY + dy / 2;
+
+        this.whiteMat.apply();
+
+        // Diagonal Direita
+        this.scene.pushMatrix();
+            this.scene.translate(diagCenterX, diagCenterY, gableZ);
+            this.scene.rotate(diagAngle, 0, 0, 1);
+            // Somamos 'trimSize' ao comprimento para a viga penetrar bem nas outras e não deixar buracos
+            this.scene.scale(diagLength + trimSize, trimSize, trimSize);
+            this.cube.display();
+        this.scene.popMatrix();
+
+        // Diagonal Esquerda
+        this.scene.pushMatrix();
+            // Invertemos o X do centro e o ângulo para espelhar a viga
+            this.scene.translate(-diagCenterX, diagCenterY, gableZ);
+            this.scene.rotate(-diagAngle, 0, 0, 1);
+            this.scene.scale(diagLength + trimSize, trimSize, trimSize);
+            this.cube.display();
+        this.scene.popMatrix();
+
 
         // ==========================================
         // 3. TELHADO GAMBREL SÓLIDO
@@ -192,12 +276,70 @@ export class MyBarn extends CGFobject {
         this.scene.popMatrix();
 
         // ==========================================
-        // 5. JANELA
+        // 5. JANELA 
         // ==========================================
+        const winX = 0;
+        const winY = height + roofHeight * 0.35;
+        const winZ = depth / 2 + trimSize / 2 + eps; 
+        const winSize = 0.8 * this.scale; 
+        const beamThickness = 0.08 * this.scale; 
+        const frameThickness = 0.1 * this.scale;
+
+        // 1. O VIDRO 
         this.scene.pushMatrix();
-            // Coloca no centro em Z do gable (depth/2)
-            this.scene.translate(0, height + 0.6 * this.scale, depth / 2 + trimSize/2);
-            this.scene.scale(0.8 * this.scale, 0.8 * this.scale, trimSize);
+            this.scene.translate(winX, winY, winZ);
+            this.scene.scale(winSize, winSize, beamThickness);
+            this.glassMat.apply(); 
+            this.cube.display();
+        this.scene.popMatrix();
+
+        // 2. CRUZ 
+        this.whiteMat.apply();
+        
+        // Viga Vertical: |
+        this.scene.pushMatrix();
+            this.scene.translate(winX, winY, winZ + 0.002);
+            // Sem rotação (já nasce vertical)
+            this.scene.scale(beamThickness, winSize, beamThickness); // Escala apenas winSize
+            this.cube.display();
+        this.scene.popMatrix();
+
+        // Viga Horizontal: -
+        this.scene.pushMatrix();
+            this.scene.translate(winX, winY, winZ + 0.002);
+            this.scene.rotate(Math.PI / 2, 0, 0, 1); // <- Roda 90 graus exatos
+            this.scene.scale(beamThickness, winSize, beamThickness);
+            this.cube.display();
+        this.scene.popMatrix();
+
+        // 3. A MOLDURA EXTERIOR 
+        this.whiteMat.apply();
+        
+        // Moldura Topo
+        this.scene.pushMatrix();
+            this.scene.translate(winX, winY + winSize/2 + frameThickness/2, winZ + 0.004);
+            this.scene.scale(winSize + frameThickness*2, frameThickness, frameThickness);
+            this.cube.display();
+        this.scene.popMatrix();
+
+        // Moldura Fundo
+        this.scene.pushMatrix();
+            this.scene.translate(winX, winY - winSize/2 - frameThickness/2, winZ + 0.004);
+            this.scene.scale(winSize + frameThickness*2, frameThickness, frameThickness);
+            this.cube.display();
+        this.scene.popMatrix();
+
+        // Moldura Esquerda
+        this.scene.pushMatrix();
+            this.scene.translate(winX - winSize/2 - frameThickness/2, winY, winZ + 0.004);
+            this.scene.scale(frameThickness, winSize, frameThickness);
+            this.cube.display();
+        this.scene.popMatrix();
+
+        // Moldura Direita
+        this.scene.pushMatrix();
+            this.scene.translate(winX + winSize/2 + frameThickness/2, winY, winZ + 0.004);
+            this.scene.scale(frameThickness, winSize, frameThickness);
             this.cube.display();
         this.scene.popMatrix();
 
@@ -207,7 +349,7 @@ export class MyBarn extends CGFobject {
 
 
 
-        
+
 
         // ==========================================
         // 7. ANEL DE ATIVAÇÃO
