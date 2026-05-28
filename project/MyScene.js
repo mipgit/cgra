@@ -34,7 +34,6 @@ export class MyScene extends CGFscene {
     this.axis = new CGFaxis(this);
     this.sphere = new MySphere(this, 50, 50);
     this.terrain = new MyPlane(this, 100);
-    this.wagon = new MyWagon(this);
     
     // Load all sky textures
     this.textures = {
