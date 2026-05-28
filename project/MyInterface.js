@@ -18,13 +18,12 @@ export class MyInterface extends CGFinterface {
         this.gui = new dat.GUI();
 
         //Checkbox element in GUI
-        this.gui.add(this.scene, 'displayAxis').name('Display Axis');
+        this.gui.add(this.scene, 'displayAxis').name('axis');
         
         // Dropdown for sky texture selection
         this.gui.add(this.scene, 'selectedTexture', ['basic', 'farm_road', 'full_clouds', 'just_blue'])
-              .name('Sky Texture')
+              .name('sky')
               .onChange(() => this.scene.updateTexture());
-      
 
         return true;
     }
