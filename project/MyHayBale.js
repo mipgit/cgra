@@ -1,30 +1,35 @@
-import { CGFobject, CGFappearance } from '../lib/CGF.js';
+import { CGFobject, CGFappearance, CGFtexture } from '../lib/CGF.js';
 
-// Hay bale — small tan box for now. State machine:
-//   'free'      → sits on ground at this.position; arrow renders above it
-//   'carried'   → controller has handed it to the wagon; position is overwritten
+// Hay bale - State machine:
+//   'free'      -> sits on ground at this.position; arrow renders above it
+//   'carried'   -> controller has handed it to the wagon; position is overwritten
 //                 each frame to sit on the wagon's back (slot 0 or 1)
-//   'delivered' → consumed at the barn; controller stops drawing it.
+//   'delivered' -> consumed at the barn; controller stops drawing it.
 export class MyHayBale extends CGFobject {
     constructor(scene, position) {
         super(scene);
         this.position = position;       // [x, y, z]
         this.heading  = Math.random() * Math.PI * 2; // visual variety
+        this.pitch    = 0;
         this.size     = { x: 0.7, y: 0.55, z: 0.9 };
         this.radius   = 0.6;            // pickup proximity
         this.state    = 'free';
 
         this.appearance = new CGFappearance(scene);
-        this.appearance.setAmbient(0.30, 0.25, 0.10, 1);
-        this.appearance.setDiffuse(0.90, 0.78, 0.30, 1);
+        this.appearance.setAmbient(0.40, 0.40, 0.40, 1);
+        this.appearance.setDiffuse(0.80, 0.80, 0.80, 1);
         this.appearance.setSpecular(0.05, 0.05, 0.05, 1);
-        this.appearance.setShininess(8);
+        this.appearance.setShininess(10);
+        
+        this.texture = new CGFtexture(scene, 'textures/haybale.png');
+        this.appearance.setTexture(this.texture);
+        this.appearance.setTextureWrap('REPEAT', 'REPEAT');
 
         this.initBuffers();
     }
 
     initBuffers() {
-        this.vertices = []; this.normals = []; this.indices = [];
+        this.vertices = []; this.normals = []; this.indices = []; this.texCoords = [];
         const faces = [
             { n: [ 1, 0, 0], v: [[ 0.5,-0.5,-0.5],[ 0.5, 0.5,-0.5],[ 0.5, 0.5, 0.5],[ 0.5,-0.5, 0.5]] },
             { n: [-1, 0, 0], v: [[-0.5,-0.5, 0.5],[-0.5, 0.5, 0.5],[-0.5, 0.5,-0.5],[-0.5,-0.5,-0.5]] },
@@ -37,33 +42,57 @@ export class MyHayBale extends CGFobject {
         for (const f of faces) {
             for (const p of f.v) { this.vertices.push(...p); this.normals.push(...f.n); }
             this.indices.push(i, i+1, i+2,  i, i+2, i+3);
+            this.texCoords.push(0, 1, 1, 1, 1, 0, 0, 0); // basic mapping for each face
             i += 4;
         }
-        this.texCoords = new Array((this.vertices.length / 3) * 2).fill(0);
         this.primitiveType = this.scene.gl.TRIANGLES;
         this.initGLBuffers();
     }
 
     // Called by controller when this bale is 'carried'. Slot is 0 or 1.
-    // Places the bale on top of the wagon body, stacked along its length so two
-    // bales don't overlap.
-    followWagon(wagon, slot) {
-        const off  = (slot === 0 ? -0.35 : 0.35) * wagon.bodySize.z;
-        const fx   = Math.sin(wagon.heading) * off;
-        const fz   = Math.cos(wagon.heading) * off;
-        this.position[0] = wagon.position[0] + fx;
-        this.position[1] = wagon.position[1] + wagon.bodySize.y + this.size.y * 0.5;
-        this.position[2] = wagon.position[2] + fz;
-        this.heading     = wagon.heading;
+    // Places the bale on top of the wagon bed base.
+    followWagon(wagonController, slot) {
+        const forwardX = Math.cos(wagonController.heading);
+        const forwardZ = -Math.sin(wagonController.heading);
+        
+        // Offset along the wagon's length (X axis in local space)
+        // Slot 0 is in the back, Slot 1 is closer to the middle
+        const localXOffset = slot === 0 ? -1.2 : -0.2; 
+        
+        // Local Y offset is 1.6 (top of the bed base)
+        const localYOffset = 1.6;
+
+        // Apply wagon pitch (rotation around local Z axis)
+        const pitch = wagonController.pitch;
+        const rotatedX = localXOffset * Math.cos(pitch) - localYOffset * Math.sin(pitch);
+        const rotatedY = localXOffset * Math.sin(pitch) + localYOffset * Math.cos(pitch);
+
+        this.position[0] = wagonController.position[0] + forwardX * rotatedX;
+        this.position[1] = wagonController.position[1] + rotatedY;
+        this.position[2] = wagonController.position[2] + forwardZ * rotatedX;
+        
+        this.heading = wagonController.heading;
+        this.pitch = pitch;
     }
 
     display() {
         if (this.state === 'delivered') return;
         const s = this.scene;
         s.pushMatrix();
-        s.translate(this.position[0], this.position[1] + this.size.y * 0.5, this.position[2]);
+        
+        // Translate to the bottom center of the bale
+        s.translate(this.position[0], this.position[1], this.position[2]);
+        
+        // Apply rotations
         s.rotate(this.heading, 0, 1, 0);
+        if (this.state === 'carried') {
+            s.rotate(this.pitch, 0, 0, 1);
+        }
+        
+        // Translate up by half size so the bottom rests on this.position
+        s.translate(0, this.size.y * 0.5, 0);
         s.scale(this.size.x, this.size.y, this.size.z);
+        
         this.appearance.apply();
         super.display();
         s.popMatrix();

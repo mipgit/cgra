@@ -1,148 +1,210 @@
-import { CGFobject, CGFappearance } from '../lib/CGF.js';
+import { CGFobject, CGFappearance, CGFtexture } from "../lib/CGF.js";
+import { MyUnitCubeQuad } from "./MyUnitCubeQuad.js";
+import { MyWagonWheel } from "./MyWagonWheel.js";
+import { MyHalfCylinder } from "./MyHalfCylinder.js";
 
-// Placeholder wagon: a colored box + the controller-facing contract.
-// Friend swaps display() and the box geometry with the detailed horse-wagon model
-// when ready; the fields and methods below are the only things the controller depends on.
+/**
+ * Displays the wagon model with controller-provided state.
+ * movement logic is in MyWagonController.
+ */
 export class MyWagon extends CGFobject {
-    constructor(scene) {
+    constructor(scene, controller) {
         super(scene);
+        this.controller = controller;
+        
+        // Components
+        this.box = new MyUnitCubeQuad(scene);
+        this.wheel = new MyWagonWheel(scene);
+        this.halfCylinder = new MyHalfCylinder(scene, 6, 1);
 
-        // Contract state — read/written by MyGameController
-        this.position = [0, 0, 0];      // world XYZ; Y set by terrain sampling
-        this.heading = 0;               // radians, yaw around Y
-        this.steering = 0;              // current wheel angle (smoothed)
-        this.steeringTarget = 0;        // where steering is lerping toward
-        this.speed = 0;                 // signed: forward +, reverse −
-        this.pitch = 0;                 // tilt along heading axis, from terrain slope
-        this.hp = 100;
-        this.maxHp = 100;
-        this.bales = [];                // currently carried bales (max 2)
-
-        // Tunables — kinematic feel
-        this.wheelbase   = 1.8;
-        this.maxSpeed    = 8.0;
-        this.reverseMax  = 3.0;
-        this.accelRate   = 4.0;
-        this.brakeRate   = 8.0;
-        this.coastDecel  = 5.0;         // deceleration when neither W nor S is held
-        this.maxSteer    = Math.PI / 4;
-        this.steerLerp   = 6.0;         // higher = snappier wheel return
-
-        // Visual stub
-        this.bodySize = { x: 1.4, y: 0.9, z: 2.4 };
-        this.appearance = new CGFappearance(scene);
-        this.appearance.setAmbient(0.25, 0.15, 0.10, 1);
-        this.appearance.setDiffuse(0.75, 0.45, 0.25, 1);
-        this.appearance.setSpecular(0.1, 0.1, 0.1, 1);
-        this.appearance.setShininess(20);
-
-        this.initBuffers();
+        this.initMaterials(); 
     }
 
-    initBuffers() {
-        // Unit box, 24 verts (per-face normals). Scaled in display().
-        this.vertices = [];
-        this.normals  = [];
-        this.indices  = [];
-        const faces = [
-            { n: [ 1, 0, 0], v: [[ 0.5,-0.5,-0.5],[ 0.5, 0.5,-0.5],[ 0.5, 0.5, 0.5],[ 0.5,-0.5, 0.5]] },
-            { n: [-1, 0, 0], v: [[-0.5,-0.5, 0.5],[-0.5, 0.5, 0.5],[-0.5, 0.5,-0.5],[-0.5,-0.5,-0.5]] },
-            { n: [ 0, 1, 0], v: [[-0.5, 0.5, 0.5],[ 0.5, 0.5, 0.5],[ 0.5, 0.5,-0.5],[-0.5, 0.5,-0.5]] },
-            { n: [ 0,-1, 0], v: [[-0.5,-0.5,-0.5],[ 0.5,-0.5,-0.5],[ 0.5,-0.5, 0.5],[-0.5,-0.5, 0.5]] },
-            { n: [ 0, 0, 1], v: [[-0.5,-0.5, 0.5],[ 0.5,-0.5, 0.5],[ 0.5, 0.5, 0.5],[-0.5, 0.5, 0.5]] },
-            { n: [ 0, 0,-1], v: [[ 0.5,-0.5,-0.5],[-0.5,-0.5,-0.5],[-0.5, 0.5,-0.5],[ 0.5, 0.5,-0.5]] },
-        ];
-        let i = 0;
-        for (const f of faces) {
-            for (const p of f.v) { this.vertices.push(...p); this.normals.push(...f.n); }
-            this.indices.push(i, i+1, i+2,  i, i+2, i+3);
-            i += 4;
-        }
-        this.texCoords = new Array((this.vertices.length / 3) * 2).fill(0);
-        this.primitiveType = this.scene.gl.TRIANGLES;
-        this.initGLBuffers();
+    initMaterials() {
+        this.woodMaterial = new CGFappearance(this.scene);
+        this.woodMaterial.setAmbient(0.4, 0.25, 0.1, 1.0);
+        this.woodMaterial.setDiffuse(0.6, 0.35, 0.15, 1.0);
+
+        this.clothMaterial = new CGFappearance(this.scene);
+        this.clothMaterial.setAmbient(0.8, 0.8, 0.8, 1.0);
+        this.clothMaterial.setDiffuse(0.9, 0.9, 0.9, 1.0);
+        this.clothMaterial.setSpecular(0.1, 0.1, 0.1, 1.0);
+        this.clothMaterial.setShininess(10.0);
+
+        this.woodTexture = new CGFtexture(this, "textures/wood.jpg");
+        this.woodMaterial.setTexture(this.woodTexture);
     }
 
-    // ---- Controller-facing API ----
+    /**
+     * displayModel() - Renders the detailed wagon geometry
+     * Called from display() after setting up transformations.
+     */
+    displayModel() {
+        // --- Materials & Body ---
+        this.woodMaterial.apply();
 
-    setSteeringTarget(t) {
-        const m = this.maxSteer;
-        this.steeringTarget = Math.max(-m, Math.min(m, t));
-    }
+        // 1. Bed base
+        this.scene.pushMatrix();
+        this.scene.translate(0, 1.5, 0); 
+        this.scene.scale(5, 0.2, 2.5);
+        this.box.display();
+        this.scene.popMatrix();
 
-    accelerate(dt) {
-        this.speed = Math.min(this.maxSpeed, this.speed + this.accelRate * dt);
-    }
+        // 2. Side walls
+        // Left
+        this.scene.pushMatrix();
+        this.scene.translate(0, 2.1, 1.15);
+        this.scene.scale(5, 1.0, 0.2);
+        this.box.display();
+        this.scene.popMatrix();
+        // Right
+        this.scene.pushMatrix();
+        this.scene.translate(0, 2.1, -1.15);
+        this.scene.scale(5, 1.0, 0.2);
+        this.box.display();
+        this.scene.popMatrix();
 
-    brake(dt) {
-        if (this.speed > 0) {
-            this.speed = Math.max(0, this.speed - this.brakeRate * dt);
-        } else {
-            this.speed = Math.max(-this.reverseMax, this.speed - this.accelRate * dt);
-        }
-    }
+        // Front Seat Box
+        this.scene.pushMatrix();
+        this.scene.translate(2.0, 2.1, 0);
+        this.scene.scale(0.8, 1.0, 2.1);
+        this.box.display();
+        this.scene.popMatrix();
 
-    // Coast to a stop when no throttle/brake is held. Controller calls this
-    // only on frames where neither W nor S is pressed.
-    coast(dt) {
-        const dec = this.coastDecel * dt;
-        if (this.speed > 0)      this.speed = Math.max(0, this.speed - dec);
-        else if (this.speed < 0) this.speed = Math.min(0, this.speed + dec);
-    }
+        // Back Wall
+        this.scene.pushMatrix();
+        this.scene.translate(-2.4, 2.1, 0);
+        this.scene.scale(0.2, 1.0, 2.1);
+        this.box.display();
+        this.scene.popMatrix();
 
-    // Per-frame integration. Controller supplies dt and a ground-Y sampler.
-    update(dt, sampleGroundY) {
-        // Smooth steering toward target
-        const k = 1 - Math.exp(-this.steerLerp * dt);
-        this.steering += (this.steeringTarget - this.steering) * k;
+        // Tongue (Front Pole)
+        this.scene.pushMatrix();
+        this.scene.translate(3.5, 1.5, 0);
+        this.scene.scale(4, 0.2, 0.2);
+        this.box.display();
+        this.scene.popMatrix();
 
-        if (Math.abs(this.speed) < 0.02) this.speed = 0;
+        // Tongue Cross
+        this.scene.pushMatrix();
+        this.scene.translate(5.0, 1.5, 0);
+        this.scene.scale(0.2, 0.2, 1.5);
+        this.box.display();
+        this.scene.popMatrix();
 
-        // Bicycle model: heading from steering & speed
-        if (Math.abs(this.speed) > 1e-4) {
-            this.heading += (this.speed / this.wheelbase) * Math.tan(this.steering) * dt;
-        }
+        // Axles
+        // Back Axle
+        this.scene.pushMatrix();
+        this.scene.translate(-1.5, 1.2, 0);
+        this.scene.scale(0.3, 0.3, 3);
+        this.box.display();
+        this.scene.popMatrix();
 
-        // Integrate position. Heading 0 → facing +Z.
-        this.position[0] += Math.sin(this.heading) * this.speed * dt;
-        this.position[2] += Math.cos(this.heading) * this.speed * dt;
+        // Front Axle
+        this.scene.pushMatrix();
+        this.scene.translate(1.5, 1.0, 0);
+        this.scene.scale(0.3, 0.3, 3);
+        this.box.display();
+        this.scene.popMatrix();
 
-        // Stick to terrain (controller passes a sampler; falls back to flat).
-        // Sample at front + back + centre so the wagon both follows AND pitches
-        // with the slope — otherwise it ghost-floats over hills.
-        if (sampleGroundY) {
-            const halfLen = this.bodySize.z * 0.5;
-            const fx = Math.sin(this.heading) * halfLen;
-            const fz = Math.cos(this.heading) * halfLen;
-            const yFront = sampleGroundY(this.position[0] + fx, this.position[2] + fz);
-            const yBack  = sampleGroundY(this.position[0] - fx, this.position[2] - fz);
-            this.position[1] = (yFront + yBack) * 0.5;
-            this.pitch = Math.atan2(yFront - yBack, 2 * halfLen);
-        } else {
-            this.position[1] = 0;
-            this.pitch = 0;
+        // Wheels
+        let rearAngle = -this.controller.rearWheelAngle;
+        let frontAngle = -this.controller.frontWheelAngle;
+
+        // Back Right
+        this.scene.pushMatrix();
+        this.scene.translate(-1.5, 1.2, -1.5);
+        this.scene.rotate(rearAngle, 0, 0, 1);
+        this.scene.scale(0.7, 0.7, 0.7);
+        this.wheel.display();
+        this.scene.popMatrix();
+
+        // Back Left
+        this.scene.pushMatrix();
+        this.scene.translate(-1.5, 1.2, 1.5);
+        this.scene.rotate(rearAngle, 0, 0, 1);
+        this.scene.scale(0.7, 0.7, 0.7);
+        this.wheel.display();
+        this.scene.popMatrix();
+
+        // Front Right - WITH STEERING ROTATION
+        this.scene.pushMatrix();
+        this.scene.translate(1.5, 1.0, -1.5);
+        this.scene.rotate(this.controller.getSteeringAngle(), 0, 1, 0);
+        this.scene.rotate(frontAngle, 0, 0, 1);
+        this.scene.scale(0.6, 0.6, 0.6);
+        this.wheel.display();
+        this.scene.popMatrix();
+
+        // Front Left - WITH STEERING ROTATION
+        this.scene.pushMatrix();
+        this.scene.translate(1.5, 1.0, 1.5);
+        this.scene.rotate(this.controller.getSteeringAngle(), 0, 1, 0);
+        this.scene.rotate(frontAngle, 0, 0, 1);
+        this.scene.scale(0.6, 0.6, 0.6);
+        this.wheel.display();
+        this.scene.popMatrix();
+
+        // --- Cover / Canopy ---
+        // More segments for smoother arch
+        let numSegments = 9;
+        let coverRadius = 1.5;
+        let archAngleStep = Math.PI / numSegments;
+        let panelWidth = 2 * coverRadius * Math.tan(archAngleStep / 2) + 0.05;
+        
+        let coverLength = 2.6;
+        let coverX = -1.1; // covers half the wagon
+
+        for (let i = 0; i < numSegments; i++) {
+            let angle = -Math.PI / 2 + (i + 0.5) * archAngleStep;
+            
+            // Cloth Panel (undulating between ribs)
+            this.clothMaterial.apply();
+            let numRibs = 3;
+            let spanLen = coverLength / (numRibs - 1);
+            let sagAmount = 0.15; // depth of the sag
+
+            for(let j = 0; j < numRibs - 1; j++) {
+                let spanCenterX = coverX - coverLength/2 + spanLen/2 + j*spanLen;
+                
+                this.scene.pushMatrix();
+                this.scene.translate(spanCenterX, 2.6 + coverRadius * Math.cos(angle), -coverRadius * Math.sin(angle));
+                this.scene.rotate(-angle, 1, 0, 0); 
+                this.scene.scale(spanLen / 2, sagAmount, panelWidth);
+                this.halfCylinder.display();
+                this.scene.popMatrix();
+            }
+
+            // Wooden arch support ribs
+            this.woodMaterial.apply();
+            
+            for(let j = 0; j < numRibs; j++) {
+                let ribX = coverX - coverLength/2 + j*(coverLength/(numRibs-1));
+                this.scene.pushMatrix();
+                this.scene.translate(ribX, 2.6 + (coverRadius-0.08) * Math.cos(angle), - (coverRadius-0.08) * Math.sin(angle));
+                this.scene.rotate(-angle, 1, 0, 0);
+                this.scene.scale(0.12, 0.12, panelWidth - 0.05);
+                this.box.display();
+                this.scene.popMatrix();
+            }
         }
     }
 
     display() {
-        const s = this.scene;
-        s.pushMatrix();
-        s.translate(this.position[0], this.position[1] + this.bodySize.y * 0.5, this.position[2]);
-        s.rotate(this.heading, 0, 1, 0);
-        s.rotate(-this.pitch, 1, 0, 0);
-        s.scale(this.bodySize.x, this.bodySize.y, this.bodySize.z);
-        this.appearance.apply();
-        super.display();
-        s.popMatrix();
+        // Get state from controller
+        const pos = this.controller.getPosition();
+        const heading = this.controller.getHeading();
+        const pitch = this.controller.getPitch();
 
-        // Tiny direction marker so heading is obvious during dev — front face cue.
-        s.pushMatrix();
-        const fwdX = Math.sin(this.heading) * this.bodySize.z * 0.55;
-        const fwdZ = Math.cos(this.heading) * this.bodySize.z * 0.55;
-        s.translate(this.position[0] + fwdX, this.position[1] + this.bodySize.y * 0.5, this.position[2] + fwdZ);
-        s.scale(0.25, 0.25, 0.25);
-        this.appearance.apply();
-        super.display();
-        s.popMatrix();
+        // Apply world transformation from controller state
+        this.scene.pushMatrix();
+        this.scene.translate(pos[0], pos[1], pos[2]);
+        this.scene.rotate(heading, 0, 1, 0);
+        this.scene.rotate(pitch, 0, 0, 1);
+
+        // Render detailed wagon model
+        this.displayModel();
+
+        this.scene.popMatrix();
     }
 }

@@ -1,4 +1,5 @@
 import { CGFshader } from '../lib/CGF.js';
+import { MyWagonController } from './MyWagonController.js';
 import { MyWagon }    from './MyWagon.js';
 import { MyHayBale }  from './MyHayBale.js';
 import { MyBarn }     from './static_elements/barn/MyBarn.js';
@@ -38,10 +39,12 @@ export class MyGameController {
         this.sampleGroundY = (x, z) => this._sampleGroundY(x, z);
 
         // ---- Wagon ----
-        this.wagon = new MyWagon(scene);
-        this.wagon.position[0] = 0;
-        this.wagon.position[2] = 0;
-        this.wagon.heading = 0;
+        this.wagonController = new MyWagonController();
+        this.wagonController.position[0] = 0;
+        this.wagonController.position[2] = 0;
+        this.wagonController.heading = 0;
+        
+        this.wagon = new MyWagon(scene, this.wagonController);
 
         // ---- Barn ----
         this.barn = new MyBarn(scene, [15, 0, -8], 5.5);
@@ -146,36 +149,89 @@ export class MyGameController {
         if (this.state === 'running') {
             // Driving input
             const throttling = this.keys.has('KeyW') || this.keys.has('KeyS');
-            if (this.keys.has('KeyW')) this.wagon.accelerate(dt);
-            if (this.keys.has('KeyS')) this.wagon.brake(dt);
-            if (!throttling) this.wagon.coast(dt);
+            if (this.keys.has('KeyW')) this.wagonController.accelerate(dt);
+            if (this.keys.has('KeyS')) this.wagonController.brake(dt);
+            if (!throttling) this.wagonController.coast(dt);
             let target = 0;
-            if (this.keys.has('KeyA')) target += this.wagon.maxSteer;
-            if (this.keys.has('KeyD')) target -= this.wagon.maxSteer;
-            this.wagon.setSteeringTarget(target);
+            if (this.keys.has('KeyA')) target += this.wagonController.maxSteeringAngle;
+            if (this.keys.has('KeyD')) target -= this.wagonController.maxSteeringAngle;
+            this.wagonController.setSteeringTarget(target);
 
-            this.wagon.hp = Math.max(0, this.wagon.hp - this.hpDecayPerSec * dt);
+            this.wagonController.hp = Math.max(0, this.wagonController.hp - this.hpDecayPerSec * dt);
             this.elapsed += dt;
             this.score = Math.floor(this.elapsed);
         }
 
         // Wagon integrates physics regardless of state (settles after gameover)
-        this.wagon.update(dt, this.sampleGroundY);
+        this.wagonController.update(dt, this.sampleGroundY);
 
         if (this.state === 'running') {
             this._handleRockCollisions();
             this._handlePickupDrop();
             this._handleDelivery();
-            if (this.wagon.hp <= 0) this.state = 'gameover';
+            if (this.wagonController.hp <= 0) this.state = 'gameover';
         }
 
         // Carried bales follow the wagon every frame so they don't pop
         let slot = 0;
-        for (const b of this.wagon.bales) { b.followWagon(this.wagon, slot++); }
+        for (const b of this.wagonController.bales) { b.followWagon(this.wagonController, slot++); }
+
+        this._updateCamera();
 
         this.prevKeys = new Set(this.keys);
-        this.hp = this.wagon.hp;
+        this.hp = this.wagonController.hp;
         this._syncHUD();
+    }
+
+    _updateCamera() {
+        if (!this.scene.camera) return;
+        
+        const wp = this.wagonController.position;
+        const cam = this.scene.camera;
+
+        if (!this.lastWagonPos) {
+            // First time setup: place camera behind the wagon
+            this.lastWagonPos = [...wp];
+            const heading = this.wagonController.heading;
+            const followDist = 25;
+            const followHeight = 11;
+            
+            const bx = -Math.cos(heading);
+            const bz = Math.sin(heading);
+            
+            const cx = wp[0] + bx * followDist;
+            const cy = wp[1] + followHeight;
+            const cz = wp[2] + bz * followDist;
+            
+            cam.setPosition(vec3.fromValues(cx, cy, cz));
+            
+            const forwardX = Math.cos(heading);
+            const forwardZ = -Math.sin(heading);
+            const lookAheadDist = 1;
+
+            const tx = wp[0] + forwardX * lookAheadDist;
+            const ty = wp[1] + 4; 
+            const tz = wp[2] + forwardZ * lookAheadDist;
+            cam.setTarget(vec3.fromValues(tx, ty, tz));
+            return;
+        }
+
+        // Calculate how much the wagon moved since last frame
+        const dx = wp[0] - this.lastWagonPos[0];
+        const dy = wp[1] - this.lastWagonPos[1];
+        const dz = wp[2] - this.lastWagonPos[2];
+
+        this.lastWagonPos = [...wp];
+
+        if (dx !== 0 || dy !== 0 || dz !== 0) {
+            // Translate both the camera's position and target by the exact same amount.
+            // preserves any rotation or zooming 
+            const newPos = vec3.fromValues(cam.position[0] + dx, cam.position[1] + dy, cam.position[2] + dz);
+            const newTarget = vec3.fromValues(cam.target[0] + dx, cam.target[1] + dy, cam.target[2] + dz);
+            
+            cam.setPosition(newPos);
+            cam.setTarget(newTarget);
+        }
     }
 
     _syncHUD() {
@@ -188,8 +244,8 @@ export class MyGameController {
         const over    = document.getElementById('gameover-overlay');
 
         if (scoreEl) scoreEl.textContent = this.score;
-        if (hpText)  hpText.textContent  = Math.ceil(this.wagon.hp);
-        if (hpBar)   hpBar.style.transform = `scaleX(${Math.max(0, this.wagon.hp / this.wagon.maxHp)})`;
+        if (hpText)  hpText.textContent  = Math.ceil(this.wagonController.hp);
+        if (hpBar)   hpBar.style.transform = `scaleX(${Math.max(0, this.wagonController.hp / this.wagonController.maxHp)})`;
         if (baleEl)  baleEl.textContent = this.balesDelivered;
 
         if (idle) {
@@ -201,7 +257,7 @@ export class MyGameController {
     }
 
     _handleRockCollisions() {
-        const w = this.wagon;
+        const w = this.wagonController;
         const half = w.bodySize.x * 0.5;
 
         // Helper genérico para aplicar dano/colisão
@@ -241,7 +297,7 @@ export class MyGameController {
     }
 
     _handlePickupDrop() {
-        const w = this.wagon;
+        const w = this.wagonController;
 
         // Pickup: nearest free bale within range, only if there's room
         if (this._pressed('KeyP') && w.bales.length < 2) {
@@ -266,8 +322,8 @@ export class MyGameController {
             b.state = 'free';
             // Drop just behind the wagon (opposite heading), snapped to ground
             const back = -(w.bodySize.z * 0.6);
-            const bx = w.position[0] + Math.sin(w.heading) * back;
-            const bz = w.position[2] + Math.cos(w.heading) * back;
+            const bx = w.position[0] + Math.cos(w.heading) * back;
+            const bz = w.position[2] - Math.sin(w.heading) * back;
             b.position[0] = bx;
             b.position[2] = bz;
             b.position[1] = this._sampleGroundY(bx, bz);
@@ -276,7 +332,7 @@ export class MyGameController {
     }
 
     _handleDelivery() {
-        const w = this.wagon;
+        const w = this.wagonController;
         const dx = w.position[0] - this.barn.position[0];
         const dz = w.position[2] - this.barn.position[2];
         const inZone = (dx*dx + dz*dz) < (this.barn.activationRadius * this.barn.activationRadius);
@@ -292,14 +348,14 @@ export class MyGameController {
     }
 
     _reset() {
-        this.wagon.position = [0, 0, 0];
-        this.wagon.heading = 0;
-        this.wagon.steering = 0;
-        this.wagon.steeringTarget = 0;
-        this.wagon.speed = 0;
-        this.wagon.hp = this.wagon.maxHp;
-        this.hp = this.wagon.maxHp;
-        this.wagon.bales = [];
+        this.wagonController.position = [0, 0, 0];
+        this.wagonController.heading = 0;
+        this.wagonController.steering = 0;
+        this.wagonController.steeringTarget = 0;
+        this.wagonController.speed = 0;
+        this.wagonController.hp = this.wagonController.maxHp;
+        this.hp = this.wagonController.maxHp;
+        this.wagonController.bales = [];
         this.score = 0;
         this.elapsed = 0;
         this.balesDelivered = 0;
@@ -329,8 +385,8 @@ export class MyGameController {
         for (let i = 0; i < this.bales.length; i++) {
             const bale = this.bales[i];
             if (bale.state !== 'free') continue;
-            const dx = bale.position[0] - this.wagon.position[0];
-            const dz = bale.position[2] - this.wagon.position[2];
+            const dx = bale.position[0] - this.wagonController.position[0];
+            const dz = bale.position[2] - this.wagonController.position[2];
             if (dx*dx + dz*dz > 40 * 40) continue; // near-visibility filter
             this.pinArrowShader.setUniformsValues({
                 uTime: now,
