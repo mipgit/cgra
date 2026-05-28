@@ -3,9 +3,9 @@ import { MySphere } from "./MySphere.js";
 import { MyPlane } from "./MyPlane.js";
 import { MyGrassField } from "./MyGrassField.js";
 import { MyFlowerField } from "./MyFlowerField.js";
-import { MyGameController } from "./MyGameController.js";
 import { MyRockField } from "./static_elements/MyRockField.js";
 import { MyTreeField } from "./static_elements/MyTreeField.js";
+import { MyGameController } from "./MyGameController.js";
 
 /**
  * MyScene
