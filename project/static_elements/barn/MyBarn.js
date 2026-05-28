@@ -1,5 +1,5 @@
-import { CGFobject, CGFappearance } from '../lib/CGF.js';
-import { MyCube } from './MyCube.js';
+import { CGFobject, CGFappearance } from '../../../lib/CGF.js';
+import { MyCube } from '../../MyCube.js';
 import { MyGambrelRoof } from './MyGambrelRoof.js'; 
 import { MyGable } from './MyGable.js';
 

@@ -1,4 +1,4 @@
-import { CGFobject } from '../lib/CGF.js';
+import { CGFobject } from '../../lib/CGF.js';
 import { MyRock } from './MyRock.js';
 
 export class MyRockField extends CGFobject {

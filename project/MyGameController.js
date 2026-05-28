@@ -1,8 +1,8 @@
 import { CGFshader } from '../lib/CGF.js';
 import { MyWagon }    from './MyWagon.js';
-import { MyRock }     from './MyRock.js';
+import { MyRock }     from './static_elements/MyRock.js';
 import { MyHayBale }  from './MyHayBale.js';
-import { MyBarn }     from './MyBarn.js';
+import { MyBarn }     from './static_elements/barn/MyBarn.js';
 import { MyPinArrow } from './MyPinArrow.js';
 
 // Owns input, world objects, the per-frame loop, and the draw of everything

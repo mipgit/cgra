@@ -1,4 +1,4 @@
-import { MyTree } from './MyTree.js';
+import { MyTree } from './tree/MyTree.js';
 
 export class MyTreeField {
     constructor(scene, instances) {

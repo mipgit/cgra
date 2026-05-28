@@ -1,4 +1,4 @@
-import { CGFappearance } from '../lib/CGF.js';
+import { CGFappearance } from '../../../lib/CGF.js';
 import { MyCone } from './MyCone.js';
 import { MyCylinder } from './MyCylinder.js';
 
