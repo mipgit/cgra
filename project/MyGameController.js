@@ -128,15 +128,6 @@ export class MyGameController {
             return null;
         };
 
-        // Rocks — stub blocks until friend's mesh lands
-        const rockCount = 12;
-        for (let i = 0; i < rockCount; i++) {
-            const p = tryPlace(2.0);
-            if (!p) continue;
-            const radius = 0.7 + Math.random() * 0.6;
-            this.rocks.push(new MyRock(this.scene, [p[0], 0, p[1]], radius));
-        }
-
         // Bales
         const baleCount = 8;
         for (let i = 0; i < baleCount; i++) {
@@ -213,25 +204,40 @@ export class MyGameController {
     _handleRockCollisions() {
         const w = this.wagon;
         const half = w.bodySize.x * 0.5;
-        for (const rock of this.rocks) {
-            const dx = w.position[0] - rock.position[0];
-            const dz = w.position[2] - rock.position[2];
-            const d2 = dx*dx + dz*dz;
-            const r = rock.radius + half;
-            if (d2 >= r * r) continue;
 
-            // Rate-limited damage so a single contact doesn't drain HP in one frame
+        // Helper genérico para aplicar dano/colisão
+        const applyCollision = (objX, objZ, objRadius) => {
+            const dx = w.position[0] - objX;
+            const dz = w.position[2] - objZ;
+            const d2 = dx*dx + dz*dz;
+            const r = objRadius + half;
+            
+            if (d2 >= r * r) return; // Não bateu
+
+            // Sofre Dano
             if (this.elapsed - this._lastRockHitT > 0.4) {
                 w.hp = Math.max(0, w.hp - 10);
                 this.lastDamage = this.score;
                 this._lastRockHitT = this.elapsed;
             }
-            // Push wagon out + bleed speed
+            // Afasta fisicamente o carro
             const d = Math.sqrt(d2) || 0.0001;
             const push = (r - d) + 0.04;
             w.position[0] += (dx / d) * push;
             w.position[2] += (dz / d) * push;
             w.speed *= 0.3;
+        };
+
+        // Verifica colisão com todas as Pedras geradas na cena
+        // Multiplicamos o scale por 1.2 porque as pedras são largas
+        for (const rock of this.scene.rockInstances) {
+            applyCollision(rock.x, rock.z, rock.scale * 1.2);
+        }
+
+        // Verifica colisão com todas as Árvores geradas na cena
+        // Multiplicamos o scale por 0.4 porque apenas o tronco tem colisão
+        for (const tree of this.scene.treeInstances) {
+            applyCollision(tree.x, tree.z, tree.scale * 0.4);
         }
     }
 
@@ -312,7 +318,6 @@ export class MyGameController {
 
         // Standard-shaded world objects
         s.setActiveShader(s.defaultShader);
-        for (const r of this.rocks) r.display();
         for (const b of this.bales) b.display();
         this.barn.display();
         this.wagon.display();
