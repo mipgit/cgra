@@ -1,7 +1,6 @@
 /**
  * MyWagonController
  * Manages wagon movement, physics, and state.
- * Works like a normal car: moves forward in facing direction, wheels steer
  */
 export class MyWagonController {
     constructor() {

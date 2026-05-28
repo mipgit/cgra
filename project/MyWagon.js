@@ -4,9 +4,8 @@ import { MyWagonWheel } from "./MyWagonWheel.js";
 import { MyHalfCylinder } from "./MyHalfCylinder.js";
 
 /**
- * MyWagon - Visual representation of the wagon
- * Displays the detailed wagon model with controller-provided state.
- * Separation of concerns: movement logic is in MyWagonController.
+ * Displays the wagon model with controller-provided state.
+ * movement logic is in MyWagonController.
  */
 export class MyWagon extends CGFobject {
     constructor(scene, controller) {
@@ -194,7 +193,7 @@ export class MyWagon extends CGFobject {
         this.scene.pushMatrix();
         this.scene.translate(pos[0], pos[1], pos[2]);
         this.scene.rotate(heading, 0, 1, 0);
-        this.scene.rotate(pitch, 1, 0, 0);
+        this.scene.rotate(pitch, 0, 0, 1);
 
         // Render detailed wagon model
         this.displayModel();
