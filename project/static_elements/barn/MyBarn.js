@@ -10,6 +10,7 @@ export class MyBarn extends CGFobject {
         
         // Anel e Posição
         this.position = position;
+        this.rotation = 0;
         this.activationRadius = activationRadius;
         this.isActive = false; // Controlador altera isto
         this.ring = new MyRing(this.scene, 1.0, 0.85, 48);
@@ -65,6 +66,7 @@ export class MyBarn extends CGFobject {
 
         s.pushMatrix();
         s.translate(this.position[0], this.position[1], this.position[2]);
+        s.rotate(this.rotation, 0, 1, 0);
 
 
         // ==========================================

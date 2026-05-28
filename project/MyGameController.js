@@ -47,7 +47,8 @@ export class MyGameController {
         this.wagon = new MyWagon(scene, this.wagonController);
 
         // ---- Barn ----
-        this.barn = new MyBarn(scene, [15, 0, -8], 5.5);
+        this.barn = new MyBarn(scene, [9, 0, -8], 5.5);
+        this.barn.rotation = 3*Math.PI/2;
 
         // ---- World objects (placed deferred so heightmap can settle Y) ----
         this.rocks = [];
