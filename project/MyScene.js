@@ -67,19 +67,12 @@ export class MyScene extends CGFscene {
     this.terrainShader = new CGFshader(this.gl, "shaders/terrain.vert", "shaders/terrain.frag");
     this.heightmapTexture = new CGFtexture(this, "textures/heightmap.png");
     this.pathTexture = new CGFtexture(this, "textures/path.jpg");
+    this.pathMapTexture = new CGFtexture(this, "textures/pathMap.png");
     this.terrainShader.setUniformsValues({ uSampler2: 1 });
     this.terrainShader.setUniformsValues({ uPathTexture: 3 });
+    this.terrainShader.setUniformsValues({ uPathMaskTexture: 4 });
     this.terrainShader.setUniformsValues({ uHeightScale: 7.0 });
     this.terrainShader.setUniformsValues({ uTexelSize: [1.0 / 1024.0, 1.0 / 1024.0] });
-    
-    this.pathWidth = 0.06;
-    this.pathWaveAmplitude = 0.12;
-    this.pathWaveFrequency = 4.0;
-    this.terrainShader.setUniformsValues({
-      uPathWidth: this.pathWidth,
-      uPathWaveAmplitude: this.pathWaveAmplitude,
-      uPathWaveFrequency: this.pathWaveFrequency
-    });
 
     this.terrainAppearance = new CGFappearance(this);
     this.terrainAppearance.setAmbient(0.3, 0.3, 0.3, 1);
@@ -185,12 +178,7 @@ export class MyScene extends CGFscene {
       }
     };
 
-    const pw = this.pathWidth, pa = this.pathWaveAmplitude, pf = this.pathWaveFrequency;
-    const onPath = (x, z) => {
-      const u = (x + 100) / 200;
-      const v = (z + 100) / 200;
-      return Math.abs(v - (0.5 + Math.sin(u * pf) * pa)) < pw;
-    };
+    const onPath = (x, z) => this._isOnPathFromMap(x, z);
     this.onPath = onPath;
 
     const DETAIL_FULL = 60, DETAIL_EDGE = 110, MIN_DENSITY = 0.35;
@@ -413,6 +401,32 @@ export class MyScene extends CGFscene {
     this._heightH = canvas.height;
   }
 
+  _ensurePathMap() {
+    if (this._pathData) return;
+    const img = this.pathMapTexture.image;
+    if (!img || !img.complete) return;
+    const canvas = document.createElement('canvas');
+    canvas.width = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0);
+    this._pathData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+    this._pathW = canvas.width;
+    this._pathH = canvas.height;
+  }
+
+  _isOnPathFromMap(x, z) {
+    this._ensurePathMap();
+    if (!this._pathData) return false;
+    const u = (x + 100) / 200;
+    const v = (z + 100) / 200;
+    const px = Math.floor(Math.min(this._pathW - 1, Math.max(0, u * this._pathW)));
+    const py = Math.floor(Math.min(this._pathH - 1, Math.max(0, v * this._pathH)));
+    const idx = (py * this._pathW + px) * 4;
+    const luminance = (0.299 * this._pathData[idx] + 0.587 * this._pathData[idx + 1] + 0.114 * this._pathData[idx + 2]) / 255;
+    return luminance > 0.5;
+  }
+
   getHeight(x, z) {
     this._ensureHeightmap();
     if (!this._heightData) return -3.0;
@@ -468,6 +482,7 @@ export class MyScene extends CGFscene {
     this.terrainShader.setUniformsValues({ uSunDir: terrainSunDir });
     this.heightmapTexture.bind(1); 
     this.pathTexture.bind(3); 
+    this.pathMapTexture.bind(4);
     this.terrainAppearance.apply();
     this.terrain.display();
     this.popMatrix();
