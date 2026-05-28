@@ -405,14 +405,25 @@ export class MyScene extends CGFscene {
     if (this._pathData) return;
     const img = this.pathMapTexture.image;
     if (!img || !img.complete) return;
+
+    // Downscale very large path maps to avoid huge memory / CPU use
+    const MAX_DIM = 1024; // tweak if you need higher/lower resolution
+    const imgW = img.naturalWidth || img.width;
+    const imgH = img.naturalHeight || img.height;
+    const scale = Math.min(1, MAX_DIM / Math.max(1, imgW, imgH));
+    const canvasW = Math.max(1, Math.floor(imgW * scale));
+    const canvasH = Math.max(1, Math.floor(imgH * scale));
     const canvas = document.createElement('canvas');
-    canvas.width = img.naturalWidth;
-    canvas.height = img.naturalHeight;
+    canvas.width = canvasW;
+    canvas.height = canvasH;
     const ctx = canvas.getContext('2d');
-    ctx.drawImage(img, 0, 0);
-    this._pathData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-    this._pathW = canvas.width;
-    this._pathH = canvas.height;
+    
+    // Draw scaled image to reduce imageData size (and memory pressure)
+    ctx.drawImage(img, 0, 0, canvasW, canvasH);
+    const imgData = ctx.getImageData(0, 0, canvasW, canvasH).data;
+    this._pathData = imgData;
+    this._pathW = canvasW;
+    this._pathH = canvasH;
   }
 
   _isOnPathFromMap(x, z) {
