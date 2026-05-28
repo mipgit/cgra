@@ -100,7 +100,7 @@ export class MyBarn extends CGFobject {
         
         // A porta ocupa 42% da largura frontal
         const doorW = width * 0.42; 
-        const doorH = height * 0.75; // Altura da porta (75% da parede)
+        const doorH = height; // Altura da porta
         
         const sidePanelW = (width - doorW) / 2; // O que sobra para cada lado
         const topPanelH = height - doorH;       // O que sobra por cima da porta
