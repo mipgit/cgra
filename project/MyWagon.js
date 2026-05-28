@@ -108,9 +108,13 @@ export class MyWagon extends CGFobject {
         this.scene.popMatrix();
 
         // Wheels
+        let rearAngle = -this.controller.rearWheelAngle;
+        let frontAngle = -this.controller.frontWheelAngle;
+
         // Back Right
         this.scene.pushMatrix();
         this.scene.translate(-1.5, 1.2, -1.5);
+        this.scene.rotate(rearAngle, 0, 0, 1);
         this.scene.scale(0.7, 0.7, 0.7);
         this.wheel.display();
         this.scene.popMatrix();
@@ -118,6 +122,7 @@ export class MyWagon extends CGFobject {
         // Back Left
         this.scene.pushMatrix();
         this.scene.translate(-1.5, 1.2, 1.5);
+        this.scene.rotate(rearAngle, 0, 0, 1);
         this.scene.scale(0.7, 0.7, 0.7);
         this.wheel.display();
         this.scene.popMatrix();
@@ -126,6 +131,7 @@ export class MyWagon extends CGFobject {
         this.scene.pushMatrix();
         this.scene.translate(1.5, 1.0, -1.5);
         this.scene.rotate(this.controller.getSteeringAngle(), 0, 1, 0);
+        this.scene.rotate(frontAngle, 0, 0, 1);
         this.scene.scale(0.6, 0.6, 0.6);
         this.wheel.display();
         this.scene.popMatrix();
@@ -134,6 +140,7 @@ export class MyWagon extends CGFobject {
         this.scene.pushMatrix();
         this.scene.translate(1.5, 1.0, 1.5);
         this.scene.rotate(this.controller.getSteeringAngle(), 0, 1, 0);
+        this.scene.rotate(frontAngle, 0, 0, 1);
         this.scene.scale(0.6, 0.6, 0.6);
         this.wheel.display();
         this.scene.popMatrix();

@@ -13,8 +13,12 @@ export class MyWagonController {
         this.steeringAngle = 0;         // front wheel steering angle (for visual rotation)
         this.steeringTarget = 0;        // where steering is lerping toward
 
+        // Wheel rotation state
+        this.frontWheelAngle = 0;
+        this.rearWheelAngle = 0;
+        
         // Movement state
-        this.speed = 0;                 // forward velocity (positive = forward)
+        this.speed = 0;
 
         // Game state
         this.hp = 100;
@@ -95,8 +99,17 @@ export class MyWagonController {
         const forwardX = Math.cos(this.heading);
         const forwardZ = -Math.sin(this.heading);
         
-        this.position[0] += forwardX * this.speed * dt;
-        this.position[2] += forwardZ * this.speed * dt;
+        const dist = this.speed * dt;
+        this.position[0] += forwardX * dist;
+        this.position[2] += forwardZ * dist;
+
+        // Update wheel rotations (distance = angle * radius => angle += distance / radius)
+        const wheelRadius = 1.51 * 0.7; 
+        
+        const visualTrickMultiplier = 0.4; 
+        
+        this.rearWheelAngle += (dist / wheelRadius) * visualTrickMultiplier;
+        this.frontWheelAngle += (dist / wheelRadius) * visualTrickMultiplier;
 
         // Terrain interaction: sample height at front and back
         if (sampleGroundY) {
