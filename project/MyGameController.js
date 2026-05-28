@@ -176,9 +176,43 @@ export class MyGameController {
         let slot = 0;
         for (const b of this.wagonController.bales) { b.followWagon(this.wagonController, slot++); }
 
+        this._updateCamera();
+
         this.prevKeys = new Set(this.keys);
         this.hp = this.wagonController.hp;
         this._syncHUD();
+    }
+
+    _updateCamera() {
+        if (!this.scene.camera) return;
+        
+        const wp = this.wagonController.position;
+        const heading = this.wagonController.heading;
+        
+        // Follow distance and height (lowered and brought slightly closer)
+        const followDist = 25;
+        const followHeight = 11;
+        
+        // Calculate camera position behind the wagon
+        // heading is rotation around Y. forward X = cos, forward Z = -sin.
+        // backward X = -cos, backward Z = sin.
+        const bx = -Math.cos(heading);
+        const bz = Math.sin(heading);
+        
+        const cx = wp[0] + bx * followDist;
+        const cy = wp[1] + followHeight;
+        const cz = wp[2] + bz * followDist;
+        
+        this.scene.camera.setPosition(vec3.fromValues(cx, cy, cz));
+        
+        const forwardX = Math.cos(heading);
+        const forwardZ = -Math.sin(heading);
+        const lookAheadDist = 1;
+
+        const tx = wp[0] + forwardX * lookAheadDist;
+        const ty = wp[1] + 4; 
+        const tz = wp[2] + forwardZ * lookAheadDist;
+        this.scene.camera.setTarget(vec3.fromValues(tx, ty, tz));
     }
 
     _syncHUD() {
