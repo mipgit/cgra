@@ -5,7 +5,7 @@ import { MyGable } from './MyGable.js';
 
 
 export class MyBarn extends CGFobject {
-    constructor(scene, position, activationRadius = 5.0, scale = 1.5) {
+    constructor(scene, position, activationRadius = 4.0, scale = 1.0) {
         super(scene);
         
         // Anel e Posição
@@ -437,11 +437,12 @@ export class MyBarn extends CGFobject {
         // 7. ANEL DE ATIVAÇÃO
         // ==========================================
         s.pushMatrix();
-            // Mantém-se encostado ao chão (Y + 0.02)
-            s.translate(this.position[0], this.position[1] + 0.02, this.position[2]);
+            s.translate(this.position[0], this.position[1] + 0.08, this.position[2]);
             s.scale(this.activationRadius, 1, this.activationRadius);
             (this.isActive ? this.ringActive : this.ringInactive).apply();
+            s.gl.disable(s.gl.CULL_FACE);
             this.ring.display();
+            s.gl.enable(s.gl.CULL_FACE);
         s.popMatrix();
     }
 }
