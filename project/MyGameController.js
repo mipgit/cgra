@@ -40,14 +40,15 @@ export class MyGameController {
 
         // ---- Wagon ----
         this.wagonController = new MyWagonController();
-        this.wagonController.position[0] = 0;
-        this.wagonController.position[2] = 0;
-        this.wagonController.heading = 0;
+        this.wagonController.position[0] = -60;
+        this.wagonController.position[2] = -42;
+        this.wagonController.heading = -Math.PI/4;
         
         this.wagon = new MyWagon(scene, this.wagonController);
 
         // ---- Barn ----
-        this.barn = new MyBarn(scene, [15, 0, -8], 5.5);
+        this.barn = new MyBarn(scene, [3, 0, -8], 16, 3.0);
+        this.barn.rotation = 7*Math.PI/6;
 
         // ---- World objects (placed deferred so heightmap can settle Y) ----
         this.rocks = [];
@@ -348,7 +349,7 @@ export class MyGameController {
     }
 
     _reset() {
-        this.wagonController.position = [0, 0, 0];
+        this.wagonController.position = [-60, 0, -42];
         this.wagonController.heading = 0;
         this.wagonController.steering = 0;
         this.wagonController.steeringTarget = 0;

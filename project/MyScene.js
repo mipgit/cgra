@@ -67,19 +67,12 @@ export class MyScene extends CGFscene {
     this.terrainShader = new CGFshader(this.gl, "shaders/terrain.vert", "shaders/terrain.frag");
     this.heightmapTexture = new CGFtexture(this, "textures/heightmap.png");
     this.pathTexture = new CGFtexture(this, "textures/path.jpg");
+    this.pathMapTexture = new CGFtexture(this, "textures/pathMap.png");
     this.terrainShader.setUniformsValues({ uSampler2: 1 });
     this.terrainShader.setUniformsValues({ uPathTexture: 3 });
+    this.terrainShader.setUniformsValues({ uPathMaskTexture: 4 });
     this.terrainShader.setUniformsValues({ uHeightScale: 7.0 });
     this.terrainShader.setUniformsValues({ uTexelSize: [1.0 / 1024.0, 1.0 / 1024.0] });
-    
-    this.pathWidth = 0.06;
-    this.pathWaveAmplitude = 0.12;
-    this.pathWaveFrequency = 4.0;
-    this.terrainShader.setUniformsValues({
-      uPathWidth: this.pathWidth,
-      uPathWaveAmplitude: this.pathWaveAmplitude,
-      uPathWaveFrequency: this.pathWaveFrequency
-    });
 
     this.terrainAppearance = new CGFappearance(this);
     this.terrainAppearance.setAmbient(0.3, 0.3, 0.3, 1);
@@ -91,6 +84,155 @@ export class MyScene extends CGFscene {
     this.terrainAppearance.setTexture(this.terrainTexture);
     this.terrainAppearance.setTextureWrap('REPEAT', 'REPEAT');
 
+    this.onPath = (x, z) => this._isOnPathFromMap(x, z);
+
+    this.grassShader = new CGFshader(this.gl, "shaders/grass.vert", "shaders/grass.frag");
+    this.grassShader.setUniformsValues({
+        uColor: [0.2, 0.6, 0.15, 1.0], uWindStrength: 0.08, uWindSpeed: 1.5,
+        uTime: 0.0, uHeightmap: 1, uHeightScale: 7.0,
+    });
+
+    this.flowerShader = new CGFshader(this.gl, "shaders/flower.vert", "shaders/flower.frag");
+    this.flowerShader.setUniformsValues({
+        uWindStrength: 0.08, uWindSpeed: 1.5, uTime: 0.0,
+        uPetalTex: 0, uHeightmap: 1, uHeightScale: 7.0,
+    });
+    this.petalTexture = new CGFtexture(this, "textures/petal.png");
+
+    this.deadGrassShader = new CGFshader(this.gl, "shaders/grass.vert", "shaders/grass.frag");
+    this.deadGrassShader.setUniformsValues({
+        uColor: [0.52, 0.42, 0.14, 1.0], uWindStrength: 0.04, uWindSpeed: 0.8,
+        uTime: 0.0, uHeightmap: 1, uHeightScale: 7.0,
+    });
+
+    this.windStrength = 0.08;
+    this.windSpeed = 1.5;
+
+    this.staticShader = new CGFshader(this.gl, "shaders/static.vert", "shaders/static.frag");
+    this.staticShader.setUniformsValues({ uHeightmap: 1, uHeightScale: 7.0 });
+
+    this.flowerFields = [];
+    this.grassFields = [];
+    this.deadGrassFields = [];
+    this.rockFields = [];
+    this.treeFields = [];
+
+    this.displayAxis = true;
+
+    this.controller = new MyGameController(this, {
+      heightScale: 7.0, terrainHalfExtent: 100.0, heightmapUrl: 'textures/heightmap.png',
+    });
+    this.setUpdatePeriod(1000 / 60);
+    this._lastT = null;
+    this._hmReady = false;
+    this._pathReady = false;
+    this._worldGenerated = false;
+  }
+
+  update(t) {
+    if (this._lastT == null) { this._lastT = t; return; }
+    const dt = Math.min(0.1, (t - this._lastT) / 1000);
+    this._lastT = t;
+    
+    if (!this._hmReady || !this._pathReady) {
+        this._ensureHeightmap();
+        this._ensurePathMap();
+        if (this._heightData && !this._hmReady) {
+            this._hmReady = true;
+            if (this.controller && typeof this.controller.onHeightmapLoaded === 'function') {
+                this.controller.onHeightmapLoaded();
+            }
+        }
+        if (this._pathData) this._pathReady = true;
+
+        if (this._hmReady && this._pathReady && !this._worldGenerated) {
+            this._generateWorld();
+            this._worldGenerated = true;
+        }
+    }
+    if (this.controller) this.controller.update(dt);
+  }
+
+  initLights() {
+    this.lights[0].setPosition(0, 0, 0, 1);
+    this.lights[0].setAmbient(1.0, 1.0, 1.0, 1.0);  
+    this.lights[0].setDiffuse(2.0, 2.0, 2.0, 1.0);  
+    this.lights[0].setSpecular(1.5, 1.5, 1.425, 1.0);
+    this.lights[0].setSpecular(1.0, 1.0, 0.95, 1.0);
+    this.lights[0].setConstantAttenuation(1.0);
+    this.lights[0].setLinearAttenuation(0.0);
+    this.lights[0].setQuadraticAttenuation(0.0);
+    this.lights[0].enable();
+    this.lights[0].update();
+  }
+
+  initCameras() {
+    this.camera = new CGFcamera(0.4, 0.1, 500, vec3.fromValues(0, 0.5, 10), vec3.fromValues(0, 0.5, 0));
+  }
+
+  setDefaultAppearance() {
+    this.setAmbient(0.2, 0.4, 0.8, 1.0);
+    this.setDiffuse(0.2, 0.4, 0.8, 1.0);
+    this.setSpecular(0.2, 0.4, 0.8, 1.0);
+    this.setShininess(10.0);
+  }
+
+  updateTexture() {
+    this.skyAppearance.setTexture(this.textures[this.selectedTexture]);
+  }
+
+  _ensureHeightmap() {
+    if (this._heightData) return;
+    const img = this.heightmapTexture.image;
+    if (!img || !img.complete) return;
+    const canvas = document.createElement('canvas');
+    canvas.width = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0);
+    this._heightData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+    this._heightW = canvas.width;
+    this._heightH = canvas.height;
+  }
+
+  _ensurePathMap() {
+    if (this._pathData) return;
+    const img = this.pathMapTexture.image;
+    if (!img || !img.complete) return;
+
+    // Downscale very large path maps to avoid huge memory / CPU use
+    const MAX_DIM = 1024; // tweak if you need higher/lower resolution
+    const imgW = img.naturalWidth || img.width;
+    const imgH = img.naturalHeight || img.height;
+    const scale = Math.min(1, MAX_DIM / Math.max(1, imgW, imgH));
+    const canvasW = Math.max(1, Math.floor(imgW * scale));
+    const canvasH = Math.max(1, Math.floor(imgH * scale));
+    const canvas = document.createElement('canvas');
+    canvas.width = canvasW;
+    canvas.height = canvasH;
+    const ctx = canvas.getContext('2d');
+    
+    // Draw scaled image to reduce imageData size (and memory pressure)
+    ctx.drawImage(img, 0, 0, canvasW, canvasH);
+    const imgData = ctx.getImageData(0, 0, canvasW, canvasH).data;
+    this._pathData = imgData;
+    this._pathW = canvasW;
+    this._pathH = canvasH;
+  }
+
+  _isOnPathFromMap(x, z) {
+    this._ensurePathMap();
+    if (!this._pathData) return false;
+    const u = (x + 100) / 200;
+    const v = (z + 100) / 200;
+    const px = Math.floor(Math.min(this._pathW - 1, Math.max(0, u * this._pathW)));
+    const py = Math.floor(Math.min(this._pathH - 1, Math.max(0, v * this._pathH)));
+    const idx = (py * this._pathW + px) * 4;
+    const luminance = (0.299 * this._pathData[idx] + 0.587 * this._pathData[idx + 1] + 0.114 * this._pathData[idx + 2]) / 255;
+    return luminance > 0.5;
+  }
+
+  _generateWorld() {
     const pastelPalette = [
       [255, 182, 193], [230, 190, 255], [255, 218, 185],
       [255, 255, 180], [180, 255, 210], [200, 162, 200],
@@ -185,13 +327,7 @@ export class MyScene extends CGFscene {
       }
     };
 
-    const pw = this.pathWidth, pa = this.pathWaveAmplitude, pf = this.pathWaveFrequency;
-    const onPath = (x, z) => {
-      const u = (x + 100) / 200;
-      const v = (z + 100) / 200;
-      return Math.abs(v - (0.5 + Math.sin(u * pf) * pa)) < pw;
-    };
-    this.onPath = onPath;
+    const onPath = this.onPath;
 
     const DETAIL_FULL = 60, DETAIL_EDGE = 110, MIN_DENSITY = 0.35;
     const tooFar = (x, z) => {
@@ -223,27 +359,10 @@ export class MyScene extends CGFscene {
       }
     }
 
-    this.grassShader = new CGFshader(this.gl, "shaders/grass.vert", "shaders/grass.frag");
-    this.grassShader.setUniformsValues({
-        uColor: [0.2, 0.6, 0.15, 1.0], uWindStrength: 0.08, uWindSpeed: 1.5,
-        uTime: 0.0, uHeightmap: 1, uHeightScale: 7.0,
-    });
-
-    this.flowerShader = new CGFshader(this.gl, "shaders/flower.vert", "shaders/flower.frag");
-    this.flowerShader.setUniformsValues({
-        uWindStrength: 0.08, uWindSpeed: 1.5, uTime: 0.0,
-        uPetalTex: 0, uHeightmap: 1, uHeightScale: 7.0,
-    });
-    this.petalTexture = new CGFtexture(this, "textures/petal.png");
-
-    this.deadGrassShader = new CGFshader(this.gl, "shaders/grass.vert", "shaders/grass.frag");
-    this.deadGrassShader.setUniformsValues({
-        uColor: [0.52, 0.42, 0.14, 1.0], uWindStrength: 0.04, uWindSpeed: 0.8,
-        uTime: 0.0, uHeightmap: 1, uHeightScale: 7.0,
-    });
-
-    this.windStrength = 0.08;
-    this.windSpeed = 1.5;
+    const FLOWER_CHUNK = 40;
+    this.flowerFields = [];
+    for (let i = 0; i < this.flowerInstances.length; i += FLOWER_CHUNK)
+      this.flowerFields.push(new MyFlowerField(this, this.flowerInstances.slice(i, i + FLOWER_CHUNK)));
 
     const makeFields = (positions) => {
         const CHUNK = 4000;
@@ -252,11 +371,6 @@ export class MyScene extends CGFscene {
             fields.push(new MyGrassField(this, positions.slice(i, i + CHUNK)));
         return fields;
     };
-
-    const FLOWER_CHUNK = 40;
-    this.flowerFields = [];
-    for (let i = 0; i < this.flowerInstances.length; i += FLOWER_CHUNK)
-        this.flowerFields.push(new MyFlowerField(this, this.flowerInstances.slice(i, i + FLOWER_CHUNK)));
 
     const greenPositions = [];
     const gridStep = 2;
@@ -299,9 +413,6 @@ export class MyScene extends CGFscene {
     }
     this.deadGrassFields = makeFields(deadPositions);
 
-    this.staticShader = new CGFshader(this.gl, "shaders/static.vert", "shaders/static.frag");
-    this.staticShader.setUniformsValues({ uHeightmap: 1, uHeightScale: 7.0 });
-
     this.rockInstances = [];
     for (let p = 0; p < 14; p++) {
         const pcx = (Math.random() - 0.5) * 2 * DETAIL_EDGE;
@@ -342,75 +453,7 @@ export class MyScene extends CGFscene {
     }
     this.treeFields = [];
     for (let i = 0; i < this.treeInstances.length; i += 15)
-        this.treeFields.push(new MyTreeField(this, this.treeInstances.slice(i, i + 15)));
-
-    this.displayAxis = true;
-
-    this.controller = new MyGameController(this, {
-      heightScale: 7.0, terrainHalfExtent: 100.0, heightmapUrl: 'textures/heightmap.png',
-    });
-    this.setUpdatePeriod(1000 / 60);
-    this._lastT = null;
-    this._hmReady = false;
-  }
-
-  update(t) {
-    if (this._lastT == null) { this._lastT = t; return; }
-    const dt = Math.min(0.1, (t - this._lastT) / 1000);
-    this._lastT = t;
-    
-    if (!this._hmReady) {
-        this._ensureHeightmap();
-        if (this._heightData) {
-            this._hmReady = true;
-            if (this.controller && typeof this.controller.onHeightmapLoaded === 'function') {
-                this.controller.onHeightmapLoaded();
-            }
-        }
-    }
-    if (this.controller) this.controller.update(dt);
-  }
-
-  initLights() {
-    this.lights[0].setPosition(0, 0, 0, 1);
-    this.lights[0].setAmbient(1.0, 1.0, 1.0, 1.0);  
-    this.lights[0].setDiffuse(2.0, 2.0, 2.0, 1.0);  
-    this.lights[0].setSpecular(1.5, 1.5, 1.425, 1.0);
-    this.lights[0].setSpecular(1.0, 1.0, 0.95, 1.0);
-    this.lights[0].setConstantAttenuation(1.0);
-    this.lights[0].setLinearAttenuation(0.0);
-    this.lights[0].setQuadraticAttenuation(0.0);
-    this.lights[0].enable();
-    this.lights[0].update();
-  }
-
-  initCameras() {
-    this.camera = new CGFcamera(0.4, 0.1, 500, vec3.fromValues(0, 0.5, 10), vec3.fromValues(0, 0.5, 0));
-  }
-
-  setDefaultAppearance() {
-    this.setAmbient(0.2, 0.4, 0.8, 1.0);
-    this.setDiffuse(0.2, 0.4, 0.8, 1.0);
-    this.setSpecular(0.2, 0.4, 0.8, 1.0);
-    this.setShininess(10.0);
-  }
-
-  updateTexture() {
-    this.skyAppearance.setTexture(this.textures[this.selectedTexture]);
-  }
-
-  _ensureHeightmap() {
-    if (this._heightData) return;
-    const img = this.heightmapTexture.image;
-    if (!img || !img.complete) return;
-    const canvas = document.createElement('canvas');
-    canvas.width = img.naturalWidth;
-    canvas.height = img.naturalHeight;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(img, 0, 0);
-    this._heightData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-    this._heightW = canvas.width;
-    this._heightH = canvas.height;
+      this.treeFields.push(new MyTreeField(this, this.treeInstances.slice(i, i + 15)));
   }
 
   getHeight(x, z) {
@@ -468,6 +511,7 @@ export class MyScene extends CGFscene {
     this.terrainShader.setUniformsValues({ uSunDir: terrainSunDir });
     this.heightmapTexture.bind(1); 
     this.pathTexture.bind(3); 
+    this.pathMapTexture.bind(4);
     this.terrainAppearance.apply();
     this.terrain.display();
     this.popMatrix();
