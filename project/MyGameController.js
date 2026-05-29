@@ -168,8 +168,11 @@ export class MyGameController {
 
         if (this.state === 'running') {
             this._handleRockCollisions();
-            this._handlePickupDrop();
-            this._handleDelivery();
+            
+            // Allow barn delivery to consume the L key press
+            const delivered = this._handleDelivery();
+            this._handlePickupDrop(delivered);
+            
             if (this.wagonController.hp <= 0) this.state = 'gameover';
         }
 
@@ -297,7 +300,7 @@ export class MyGameController {
         }
     }
 
-    _handlePickupDrop() {
+    _handlePickupDrop(skipDrop) {
         const w = this.wagonController;
 
         // Pickup: nearest free bale within range, only if there's room
@@ -318,7 +321,7 @@ export class MyGameController {
         }
 
         // Drop: pop the most-recently picked bale, place behind the wagon
-        if (this._pressed('KeyL') && w.bales.length > 0) {
+        if (!skipDrop && this._pressed('KeyL') && w.bales.length > 0) {
             const b = w.bales.pop();
             b.state = 'free';
             // Drop just behind the wagon (opposite heading), snapped to ground
@@ -338,14 +341,17 @@ export class MyGameController {
         const dz = w.position[2] - this.barn.position[2];
         const inZone = (dx*dx + dz*dz) < (this.barn.activationRadius * this.barn.activationRadius);
         this.barn.isActive = inZone;
-        if (inZone && w.bales.length > 0) {
+        
+        if (inZone && w.bales.length > 0 && this._pressed('KeyL')) {
             for (const b of w.bales) { b.state = 'delivered'; }
             this.balesDelivered += w.bales.length;
             w.bales.length = 0;
             // Restore some HP per delivery batch
             w.hp = Math.min(w.maxHp, w.hp + 15);
             this.lastRestore = this.score;
+            return true;
         }
+        return false;
     }
 
     _reset() {
