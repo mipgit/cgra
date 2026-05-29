@@ -22,6 +22,8 @@ export class MyGameController {
         this._lastRockHitT = -1;
         this.hp = 100;
         this.maxHp = 100;
+        this.wagonBoundsRadius = opts.wagonBoundsRadius ?? 95.0;
+        this.cameraBoundsRadius = opts.cameraBoundsRadius ?? 98.0;
 
         // ---- Input ----
         this.keys = new Set();
@@ -121,6 +123,39 @@ export class MyGameController {
         const localZ = zSlots[Math.floor(index / xSlots.length) % zSlots.length] * this.barn.scale;
         return this._barnLocalToWorld(localX, 0, localZ);
     }
+    _constrainWagonToBounds() {
+        const w = this.wagonController;
+        const x = w.position[0];
+        const z = w.position[2];
+        const dist = Math.hypot(x, z);
+
+        if (dist <= this.wagonBoundsRadius || dist < 1e-6) {
+            return;
+        }
+
+        const scale = this.wagonBoundsRadius / dist;
+        w.position[0] = x * scale;
+        w.position[2] = z * scale;
+        w.position[1] = this._sampleGroundY(w.position[0], w.position[2]);
+    }
+    _constrainCameraToBounds() {
+        if (!this.scene.camera) return;
+
+        const cam = this.scene.camera;
+        const pos = cam.position;
+        const target = cam.target;
+        const posDist = Math.hypot(pos[0], pos[1], pos[2]);
+        const targetDist = Math.hypot(target[0], target[1], target[2]);
+        const dist = Math.max(posDist, targetDist);
+
+        if (dist <= this.cameraBoundsRadius || dist < 1e-6) {
+            return;
+        }
+
+        const scale = this.cameraBoundsRadius / dist;
+        cam.setPosition(vec3.fromValues(pos[0] * scale, pos[1] * scale, pos[2] * scale));
+        cam.setTarget(vec3.fromValues(target[0] * scale, target[1] * scale, target[2] * scale));
+    }
     _reseatToGround() {
         for (const r of this.rocks) r.position[1] = this._sampleGroundY(r.position[0], r.position[2]);
         for (const b of this.bales) if (b.state === 'free') b.position[1] = this._sampleGroundY(b.position[0], b.position[2]);
@@ -183,6 +218,7 @@ export class MyGameController {
 
         // Wagon integrates physics regardless of state (settles after gameover)
         this.wagonController.update(dt, this.sampleGroundY);
+        this._constrainWagonToBounds();
 
         if (this.state === 'running') {
             this._handleRockCollisions();
@@ -235,6 +271,7 @@ export class MyGameController {
             const ty = wp[1] + 4; 
             const tz = wp[2] + forwardZ * lookAheadDist;
             cam.setTarget(vec3.fromValues(tx, ty, tz));
+            this._constrainCameraToBounds();
             return;
         }
 
@@ -254,6 +291,8 @@ export class MyGameController {
             cam.setPosition(newPos);
             cam.setTarget(newTarget);
         }
+
+        this._constrainCameraToBounds();
     }
 
     _syncHUD() {
