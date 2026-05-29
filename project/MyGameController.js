@@ -103,6 +103,24 @@ export class MyGameController {
         const l1  = l01 * (1 - tx) + l11 * tx;
         return ((l0 * (1 - ty) + l1 * ty) - 0.5) * this.heightScale;
     }
+    _barnLocalToWorld(localX, localY, localZ) {
+        const rot = this.barn.rotation;
+        const cosR = Math.cos(rot);
+        const sinR = Math.sin(rot);
+
+        return [
+            this.barn.position[0] + localX * cosR + localZ * sinR,
+            this.barn.position[1] + localY,
+            this.barn.position[2] - localX * sinR + localZ * cosR,
+        ];
+    }
+    _barnStoragePosition(index) {
+        const xSlots = [-0.8, 0.0, 0.8];
+        const zSlots = [-0.5, 0.15];
+        const localX = xSlots[index % xSlots.length] * this.barn.scale;
+        const localZ = zSlots[Math.floor(index / xSlots.length) % zSlots.length] * this.barn.scale;
+        return this._barnLocalToWorld(localX, 0, localZ);
+    }
     _reseatToGround() {
         for (const r of this.rocks) r.position[1] = this._sampleGroundY(r.position[0], r.position[2]);
         for (const b of this.bales) if (b.state === 'free') b.position[1] = this._sampleGroundY(b.position[0], b.position[2]);
@@ -343,7 +361,15 @@ export class MyGameController {
         this.barn.isActive = inZone;
         
         if (inZone && w.bales.length > 0 && this._pressed('KeyL')) {
-            for (const b of w.bales) { b.state = 'delivered'; }
+            const storedCount = this.bales.filter(bale => bale.state === 'stored').length;
+            w.bales.forEach((b, offset) => {
+                const position = this._barnStoragePosition(storedCount + offset);
+                b.state = 'stored';
+                b.position[0] = position[0];
+                b.position[1] = position[1];
+                b.position[2] = position[2];
+                b.heading = this.barn.rotation;
+            });
             this.balesDelivered += w.bales.length;
             w.bales.length = 0;
             // Restore some HP per delivery batch
