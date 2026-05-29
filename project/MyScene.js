@@ -435,21 +435,21 @@ export class MyScene extends CGFscene {
         this.rockFields.push(new MyRockField(this, this.rockInstances.slice(i, i + 30)));
 
     this.treeInstances = [];
-    for (let p = 0; p < 10; p++) {
-        const pcx = (Math.random() - 0.5) * 2 * DETAIL_EDGE;
-        const pcz = (Math.random() - 0.5) * 2 * DETAIL_EDGE;
-        if (onPath(pcx, pcz) || tooFar(pcx, pcz)) continue;
-        const count = 2 + Math.floor(Math.random() * 4);
-        for (let j = 0; j < count; j++) {
-            const angle = Math.random() * Math.PI * 2;
-            const r = Math.sqrt(Math.random()) * 5.0;
-            const x = pcx + Math.cos(angle) * r;
-            const z = pcz + Math.sin(angle) * r;
-            if (onPath(x, z) || tooFar(x, z)) continue;
-            this.treeInstances.push({
-                x, z, rotY: Math.random() * Math.PI * 2, scale: 0.7 + Math.random() * 0.8,
-            });
-        }
+    for (let p = 0; p < 22; p++) {
+      const pcx = (Math.random() - 0.5) * 2 * DETAIL_EDGE;
+      const pcz = (Math.random() - 0.5) * 2 * DETAIL_EDGE;
+      if (onPath(pcx, pcz) || tooFar(pcx, pcz)) continue;
+      const count = 3 + Math.floor(Math.random() * 6); // more trees per patch
+      for (let j = 0; j < count; j++) {
+        const angle = Math.random() * Math.PI * 2;
+        const r = Math.sqrt(Math.random()) * 5.0;
+        const x = pcx + Math.cos(angle) * r;
+        const z = pcz + Math.sin(angle) * r;
+        if (onPath(x, z) || tooFar(x, z)) continue;
+        this.treeInstances.push({
+          x, z, rotY: Math.random() * Math.PI * 2, scale: 1.0 + Math.random() * 1.2,
+        });
+      }
     }
     this.treeFields = [];
     for (let i = 0; i < this.treeInstances.length; i += 15)

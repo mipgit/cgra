@@ -261,8 +261,8 @@ export class MyGameController {
         const w = this.wagonController;
         const half = w.bodySize.x * 0.5;
 
-        // Helper genérico para aplicar dano/colisão
-        const applyCollision = (objX, objZ, objRadius) => {
+        // Helper genérico para aplicar colisão; o dano fica opcional.
+        const applyCollision = (objX, objZ, objRadius, applyDamage = true) => {
             const dx = w.position[0] - objX;
             const dz = w.position[2] - objZ;
             const d2 = dx*dx + dz*dz;
@@ -271,7 +271,7 @@ export class MyGameController {
             if (d2 >= r * r) return; // Não bateu
 
             // Sofre Dano
-            if (this.elapsed - this._lastRockHitT > 0.4) {
+            if (applyDamage && this.elapsed - this._lastRockHitT > 0.4) {
                 w.hp = Math.max(0, w.hp - 10);
                 this.lastDamage = this.score;
                 this._lastRockHitT = this.elapsed;
@@ -291,9 +291,9 @@ export class MyGameController {
         }
 
         // Verifica colisão com todas as Árvores geradas na cena
-        // Multiplicamos o scale por 0.4 porque apenas o tronco tem colisão
+        // Apenas empurra; árvores não tiram vida/pontos.
         for (const tree of this.scene.treeInstances) {
-            applyCollision(tree.x, tree.z, tree.scale * 0.4);
+            applyCollision(tree.x, tree.z, tree.scale * 0.4, false);
         }
     }
 
