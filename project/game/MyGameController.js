@@ -235,7 +235,7 @@ export class MyGameController {
         }
 
         // Wagon integrates physics regardless of state (settles after gameover)
-        this.wagonController.update(dt, this.sampleGroundY);
+        this.wagonController.update(dt, this.sampleGroundY, this.scene.onPath);
         this._constrainWagonToBounds();
 
         if (this.state === 'running') {

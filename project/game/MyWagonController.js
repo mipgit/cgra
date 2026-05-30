@@ -73,8 +73,9 @@ export class MyWagonController {
      * Update wagon physics each frame
      * @param {number} dt - delta time in seconds
      * @param {function} sampleGroundY - function(x, z) that returns ground Y height
+     * @param {function} isOnPath - function(x, z) that returns true when the wagon is on the path
      */
-    update(dt, sampleGroundY) {
+    update(dt, sampleGroundY, isOnPath) {
         // Smooth steering wheel toward target
         const k = 1 - Math.exp(-this.steeringLerpSpeed * dt);
         this.steeringAngle += (this.steeringTarget - this.steeringAngle) * k;
@@ -88,7 +89,8 @@ export class MyWagonController {
         // Only front wheels steer, rear wheels don't
         if (Math.abs(this.speed) > 1e-4) {
             // Using bicycle model: heading change = tan(steer_angle) * speed / wheelbase
-            const headingChange = Math.tan(this.steeringAngle) * this.speed / this.wheelbase * dt;
+            const terrainFactor = this._getTerrainSpeedFactor(isOnPath);
+            const headingChange = Math.tan(this.steeringAngle) * this.speed * terrainFactor / this.wheelbase * dt;
             this.heading += headingChange;
         }
 
@@ -99,7 +101,7 @@ export class MyWagonController {
         const forwardX = Math.cos(this.heading);
         const forwardZ = -Math.sin(this.heading);
         
-        const dist = this.speed * dt;
+        const dist = this.speed * this._getTerrainSpeedFactor(isOnPath) * dt;
         this.position[0] += forwardX * dist;
         this.position[2] += forwardZ * dist;
 
@@ -139,6 +141,28 @@ export class MyWagonController {
             this.position[1] = 0;
             this.pitch = 0;
         }
+    }
+
+    _getTerrainSpeedFactor(isOnPath) {
+        if (typeof isOnPath !== 'function') return 1.0;
+
+        const forwardX = Math.cos(this.heading);
+        const forwardZ = -Math.sin(this.heading);
+        const frontX = this.position[0] + forwardX * this.frontAxleX;
+        const frontZ = this.position[2] + forwardZ * this.frontAxleX;
+        const rearX = this.position[0] + forwardX * this.rearAxleX;
+        const rearZ = this.position[2] + forwardZ * this.rearAxleX;
+
+        const samples = [
+            isOnPath(this.position[0], this.position[2]) ? 1 : 0,
+            isOnPath(frontX, frontZ) ? 1 : 0,
+            isOnPath(rearX, rearZ) ? 1 : 0,
+        ];
+        const pathRatio = (samples[0] + samples[1] + samples[2]) / samples.length;
+
+        const grassFactor = 0.75;
+        const pathFactor = 1.35;
+        return grassFactor + (pathFactor - grassFactor) * pathRatio;
     }
 
     // ---- State Getters ----
