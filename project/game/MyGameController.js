@@ -1,8 +1,8 @@
-import { CGFshader } from '../lib/CGF.js';
+import { CGFshader } from '../../lib/CGF.js';
 import { MyWagonController } from './MyWagonController.js';
 import { MyWagon }    from './MyWagon.js';
 import { MyHayBale }  from './MyHayBale.js';
-import { MyBarn }     from './static_elements/barn/MyBarn.js';
+import { MyBarn }     from '../static_elements/barn/MyBarn.js';
 import { MyPinArrow } from './MyPinArrow.js';
 
 // Owns input, world objects, the per-frame loop, and the draw of everything
@@ -22,6 +22,8 @@ export class MyGameController {
         this._lastRockHitT = -1;
         this.hp = 100;
         this.maxHp = 100;
+        this.wagonBoundsRadius = opts.wagonBoundsRadius ?? 95.0;
+        this.cameraBoundsRadius = opts.cameraBoundsRadius ?? 98.0;
 
         // ---- Input ----
         this.keys = new Set();
@@ -40,15 +42,17 @@ export class MyGameController {
 
         // ---- Wagon ----
         this.wagonController = new MyWagonController();
-        this.wagonController.position[0] = -60;
-        this.wagonController.position[2] = -42;
+        this.wagonController.position[0] = -40;
+        this.wagonController.position[2] = -40;
         this.wagonController.heading = -Math.PI/4;
+        this._baleBatchSize = 8;
         
         this.wagon = new MyWagon(scene, this.wagonController);
 
         // ---- Barn ----
-        this.barn = new MyBarn(scene, [3, 0, -8], 16, 3.0);
+        this.barn = new MyBarn(scene, [3, 0, -8], 10, 3.0);
         this.barn.rotation = 7*Math.PI/6;
+        this.barn.deliveryCenter = this._barnDeliveryCenter();
 
         // ---- World objects (placed deferred so heightmap can settle Y) ----
         this.rocks = [];
@@ -103,18 +107,80 @@ export class MyGameController {
         const l1  = l01 * (1 - tx) + l11 * tx;
         return ((l0 * (1 - ty) + l1 * ty) - 0.5) * this.heightScale;
     }
+    _barnLocalToWorld(localX, localY, localZ) {
+        const rot = this.barn.rotation;
+        const cosR = Math.cos(rot);
+        const sinR = Math.sin(rot);
+
+        return [
+            this.barn.position[0] + localX * cosR + localZ * sinR,
+            this.barn.position[1] + localY,
+            this.barn.position[2] - localX * sinR + localZ * cosR,
+        ];
+    }
+    _barnDeliveryCenter() {
+        const deliveryOffset = this.barn.activationRadius + (2.5 * this.barn.scale);
+        const [x, , z] = this._barnLocalToWorld(0, 0, deliveryOffset);
+        return [x, this._sampleGroundY(x, z), z];
+    }
+    _barnStoragePosition(index) {
+        const xSlots = [-0.8, 0.0, 0.8];
+        const zSlots = [-0.5, 0.15];
+        const localX = xSlots[index % xSlots.length] * this.barn.scale;
+        const localZ = zSlots[Math.floor(index / xSlots.length) % zSlots.length] * this.barn.scale;
+        return this._barnLocalToWorld(localX, 0, localZ);
+    }
+    _constrainWagonToBounds() {
+        const w = this.wagonController;
+        const x = w.position[0];
+        const z = w.position[2];
+        const dist = Math.hypot(x, z);
+
+        if (dist <= this.wagonBoundsRadius || dist < 1e-6) {
+            return;
+        }
+
+        const scale = this.wagonBoundsRadius / dist;
+        w.position[0] = x * scale;
+        w.position[2] = z * scale;
+        w.position[1] = this._sampleGroundY(w.position[0], w.position[2]);
+    }
+    _constrainCameraToBounds() {
+        if (!this.scene.camera) return;
+
+        const cam = this.scene.camera;
+        const pos = cam.position;
+        const target = cam.target;
+        const posDist = Math.hypot(pos[0], pos[1], pos[2]);
+        const targetDist = Math.hypot(target[0], target[1], target[2]);
+        const dist = Math.max(posDist, targetDist);
+
+        if (dist <= this.cameraBoundsRadius || dist < 1e-6) {
+            return;
+        }
+
+        const scale = this.cameraBoundsRadius / dist;
+        cam.setPosition(vec3.fromValues(pos[0] * scale, pos[1] * scale, pos[2] * scale));
+        cam.setTarget(vec3.fromValues(target[0] * scale, target[1] * scale, target[2] * scale));
+    }
     _reseatToGround() {
         for (const r of this.rocks) r.position[1] = this._sampleGroundY(r.position[0], r.position[2]);
         for (const b of this.bales) if (b.state === 'free') b.position[1] = this._sampleGroundY(b.position[0], b.position[2]);
         this.barn.position[1] = this._sampleGroundY(this.barn.position[0], this.barn.position[2]);
     }
 
-    // ---- Spawning ----
-    _spawnWorld() {
-        const RANGE = 28;                // half-extent of play area around spawn
+    _spawnBales(count) {
+        const RANGE = 28;
         const onPath = this.scene.onPath ?? (() => false);
-        const placed = [{ x: 0, z: 0, r: 3 }];                          // wagon spawn buffer
+        const [deliveryX, , deliveryZ] = this._barnDeliveryCenter();
+        const placed = [{ x: 0, z: 0, r: 3 }];
         placed.push({ x: this.barn.position[0], z: this.barn.position[2], r: this.barn.activationRadius + 1 });
+        placed.push({ x: deliveryX, z: deliveryZ, r: this.barn.activationRadius + 1 });
+
+        for (const bale of this.bales) {
+            if (!bale || !bale.position) continue;
+            placed.push({ x: bale.position[0], z: bale.position[2], r: bale.radius + 0.2 });
+        }
 
         const tryPlace = (minR, maxTries = 40) => {
             for (let t = 0; t < maxTries; t++) {
@@ -131,13 +197,18 @@ export class MyGameController {
             return null;
         };
 
-        // Bales
-        const baleCount = 8;
-        for (let i = 0; i < baleCount; i++) {
+        for (let i = 0; i < count; i++) {
             const p = tryPlace(1.5);
             if (!p) continue;
-            this.bales.push(new MyHayBale(this.scene, [p[0], 0, p[1]]));
+            const bale = new MyHayBale(this.scene, [p[0], 0, p[1]]);
+            bale.position[1] = this._sampleGroundY(p[0], p[1]);
+            this.bales.push(bale);
         }
+    }
+
+    // ---- Spawning ----
+    _spawnWorld() {
+        this._spawnBales(this._baleBatchSize);
     }
 
     _pressed(code) { return this.keys.has(code) && !this.prevKeys.has(code); }
@@ -164,12 +235,16 @@ export class MyGameController {
         }
 
         // Wagon integrates physics regardless of state (settles after gameover)
-        this.wagonController.update(dt, this.sampleGroundY);
+        this.wagonController.update(dt, this.sampleGroundY, this.scene.onPath);
+        this._constrainWagonToBounds();
 
         if (this.state === 'running') {
             this._handleRockCollisions();
-            this._handlePickupDrop();
-            this._handleDelivery();
+            
+            // Allow barn delivery to consume the L key press
+            const delivered = this._handleDelivery();
+            this._handlePickupDrop(delivered);
+            
             if (this.wagonController.hp <= 0) this.state = 'gameover';
         }
 
@@ -214,6 +289,7 @@ export class MyGameController {
             const ty = wp[1] + 4; 
             const tz = wp[2] + forwardZ * lookAheadDist;
             cam.setTarget(vec3.fromValues(tx, ty, tz));
+            this._constrainCameraToBounds();
             return;
         }
 
@@ -233,6 +309,8 @@ export class MyGameController {
             cam.setPosition(newPos);
             cam.setTarget(newTarget);
         }
+
+        this._constrainCameraToBounds();
     }
 
     _syncHUD() {
@@ -285,9 +363,9 @@ export class MyGameController {
         };
 
         // Verifica colisão com todas as Pedras geradas na cena
-        // Multiplicamos o scale por 1.2 porque as pedras são largas
+        // raio de colisão mais apertado para evitar bloquear o movimento ao lado
         for (const rock of this.scene.rockInstances) {
-            applyCollision(rock.x, rock.z, rock.scale * 1.2);
+            applyCollision(rock.x, rock.z, rock.scale * 0.3);
         }
 
         // Verifica colisão com todas as Árvores geradas na cena
@@ -297,7 +375,7 @@ export class MyGameController {
         }
     }
 
-    _handlePickupDrop() {
+    _handlePickupDrop(skipDrop) {
         const w = this.wagonController;
 
         // Pickup: nearest free bale within range, only if there's room
@@ -318,7 +396,7 @@ export class MyGameController {
         }
 
         // Drop: pop the most-recently picked bale, place behind the wagon
-        if (this._pressed('KeyL') && w.bales.length > 0) {
+        if (!skipDrop && this._pressed('KeyL') && w.bales.length > 0) {
             const b = w.bales.pop();
             b.state = 'free';
             // Drop just behind the wagon (opposite heading), snapped to ground
@@ -334,22 +412,44 @@ export class MyGameController {
 
     _handleDelivery() {
         const w = this.wagonController;
-        const dx = w.position[0] - this.barn.position[0];
-        const dz = w.position[2] - this.barn.position[2];
+        const [cx, , cz] = this._barnDeliveryCenter();
+        const dx = w.position[0] - cx;
+        const dz = w.position[2] - cz;
         const inZone = (dx*dx + dz*dz) < (this.barn.activationRadius * this.barn.activationRadius);
         this.barn.isActive = inZone;
-        if (inZone && w.bales.length > 0) {
-            for (const b of w.bales) { b.state = 'delivered'; }
+        
+        if (inZone && w.bales.length > 0 && this._pressed('KeyL')) {
+            const storedCount = this.bales.filter(bale => bale.state === 'stored').length;
+            w.bales.forEach((b, offset) => {
+                const position = this._barnStoragePosition(storedCount + offset);
+                b.state = 'stored';
+                b.position[0] = position[0];
+                b.position[1] = position[1];
+                b.position[2] = position[2];
+                b.heading = this.barn.rotation;
+            });
             this.balesDelivered += w.bales.length;
             w.bales.length = 0;
             // Restore some HP per delivery batch
             w.hp = Math.min(w.maxHp, w.hp + 15);
             this.lastRestore = this.score;
+            this._maybeRefillBales();
+            return true;
         }
+        return false;
+    }
+
+    _maybeRefillBales() {
+        const hasFreeBales = this.bales.some(b => b.state === 'free');
+        if (hasFreeBales) return;
+        if (this.wagonController.bales.length > 0) return;
+        if (this.state !== 'running') return;
+
+        this._spawnBales(this._baleBatchSize);
     }
 
     _reset() {
-        this.wagonController.position = [-60, 0, -42];
+        this.wagonController.position = [-40, 0, -40];
         this.wagonController.heading = 0;
         this.wagonController.steering = 0;
         this.wagonController.steeringTarget = 0;
@@ -375,6 +475,7 @@ export class MyGameController {
         // Standard-shaded world objects
         s.setActiveShader(s.defaultShader);
         for (const b of this.bales) b.display();
+        this.barn.deliveryCenter = this._barnDeliveryCenter();
         this.barn.display();
         this.wagon.display();
 

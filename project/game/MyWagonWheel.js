@@ -1,7 +1,7 @@
-import { CGFobject } from "../lib/CGF.js";
-import { MyUnitCubeQuad } from "./MyUnitCubeQuad.js";
-import { MyCylinder } from "./MyCylinder.js";
-import { MyHollowCylinder } from "./MyHollowCylinder.js";
+import { CGFobject } from "../../lib/CGF.js";
+import { MyUnitCubeQuad } from "../shapes/MyUnitCubeQuad.js";
+import { MyCylinder } from "../shapes/MyCylinder.js";
+import { MyHollowCylinder } from "../shapes/MyHollowCylinder.js";
 
 export class MyWagonWheel extends CGFobject {
     constructor(scene) {

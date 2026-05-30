@@ -1,11 +1,11 @@
 import { CGFobject, CGFappearance } from '../../../lib/CGF.js';
-import { MyCube } from '../../MyCube.js';
+import { MyCube } from '../../shapes/MyCube.js';
 import { MyGambrelRoof } from './MyGambrelRoof.js'; 
 import { MyGable } from './MyGable.js';
 
 
 export class MyBarn extends CGFobject {
-    constructor(scene, position, activationRadius = 4.0, scale = 1.0) {
+    constructor(scene, position, activationRadius = 10.0, scale = 1.0) {
         super(scene);
         
         // Anel e Posição
@@ -436,8 +436,9 @@ export class MyBarn extends CGFobject {
         // ==========================================
         // 7. ANEL DE ATIVAÇÃO
         // ==========================================
+        const ringPos = this.deliveryCenter ?? this.position;
         s.pushMatrix();
-            s.translate(this.position[0], this.position[1] + 0.08, this.position[2]);
+            s.translate(ringPos[0], ringPos[1] + 0.08, ringPos[2]);
             s.scale(this.activationRadius, 1, this.activationRadius);
             (this.isActive ? this.ringActive : this.ringInactive).apply();
             s.gl.disable(s.gl.CULL_FACE);

@@ -1,4 +1,4 @@
-import { CGFobject } from "../lib/CGF.js";
+import { CGFobject } from "../../lib/CGF.js";
 
 export class MyHollowCylinder extends CGFobject {
     constructor(scene, slices, stacks, innerRadius = 0.5, outerRadius = 1.0) {

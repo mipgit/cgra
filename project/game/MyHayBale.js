@@ -1,10 +1,11 @@
-import { CGFobject, CGFappearance, CGFtexture } from '../lib/CGF.js';
+import { CGFobject, CGFappearance, CGFtexture } from '../../lib/CGF.js';
 
 // Hay bale - State machine:
 //   'free'      -> sits on ground at this.position; arrow renders above it
 //   'carried'   -> controller has handed it to the wagon; position is overwritten
 //                 each frame to sit on the wagon's back (slot 0 or 1)
-//   'delivered' -> consumed at the barn; controller stops drawing it.
+//   'stored'    -> delivered to the barn and left visible inside it
+//   'delivered' -> reserved for non-visible removal
 export class MyHayBale extends CGFobject {
     constructor(scene, position) {
         super(scene);
