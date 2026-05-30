@@ -49,8 +49,9 @@ export class MyGameController {
         this.wagon = new MyWagon(scene, this.wagonController);
 
         // ---- Barn ----
-        this.barn = new MyBarn(scene, [3, 0, -8], 16, 3.0);
+        this.barn = new MyBarn(scene, [3, 0, -8], 10, 3.0);
         this.barn.rotation = 7*Math.PI/6;
+        this.barn.deliveryCenter = this._barnDeliveryCenter();
 
         // ---- World objects (placed deferred so heightmap can settle Y) ----
         this.rocks = [];
@@ -116,6 +117,11 @@ export class MyGameController {
             this.barn.position[2] - localX * sinR + localZ * cosR,
         ];
     }
+    _barnDeliveryCenter() {
+        const deliveryOffset = this.barn.activationRadius + (2.5 * this.barn.scale);
+        const [x, , z] = this._barnLocalToWorld(0, 0, deliveryOffset);
+        return [x, this._sampleGroundY(x, z), z];
+    }
     _barnStoragePosition(index) {
         const xSlots = [-0.8, 0.0, 0.8];
         const zSlots = [-0.5, 0.15];
@@ -166,8 +172,10 @@ export class MyGameController {
     _spawnWorld() {
         const RANGE = 28;                // half-extent of play area around spawn
         const onPath = this.scene.onPath ?? (() => false);
+        const [deliveryX, , deliveryZ] = this._barnDeliveryCenter();
         const placed = [{ x: 0, z: 0, r: 3 }];                          // wagon spawn buffer
         placed.push({ x: this.barn.position[0], z: this.barn.position[2], r: this.barn.activationRadius + 1 });
+        placed.push({ x: deliveryX, z: deliveryZ, r: this.barn.activationRadius + 1 });
 
         const tryPlace = (minR, maxTries = 40) => {
             for (let t = 0; t < maxTries; t++) {
@@ -394,8 +402,9 @@ export class MyGameController {
 
     _handleDelivery() {
         const w = this.wagonController;
-        const dx = w.position[0] - this.barn.position[0];
-        const dz = w.position[2] - this.barn.position[2];
+        const [cx, , cz] = this._barnDeliveryCenter();
+        const dx = w.position[0] - cx;
+        const dz = w.position[2] - cz;
         const inZone = (dx*dx + dz*dz) < (this.barn.activationRadius * this.barn.activationRadius);
         this.barn.isActive = inZone;
         
@@ -446,6 +455,7 @@ export class MyGameController {
         // Standard-shaded world objects
         s.setActiveShader(s.defaultShader);
         for (const b of this.bales) b.display();
+        this.barn.deliveryCenter = this._barnDeliveryCenter();
         this.barn.display();
         this.wagon.display();
 
