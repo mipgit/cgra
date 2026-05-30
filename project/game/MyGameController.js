@@ -42,8 +42,8 @@ export class MyGameController {
 
         // ---- Wagon ----
         this.wagonController = new MyWagonController();
-        this.wagonController.position[0] = -60;
-        this.wagonController.position[2] = -42;
+        this.wagonController.position[0] = -40;
+        this.wagonController.position[2] = -40;
         this.wagonController.heading = -Math.PI/4;
         
         this.wagon = new MyWagon(scene, this.wagonController);
@@ -420,7 +420,7 @@ export class MyGameController {
     }
 
     _reset() {
-        this.wagonController.position = [-60, 0, -42];
+        this.wagonController.position = [-40, 0, -40];
         this.wagonController.heading = 0;
         this.wagonController.steering = 0;
         this.wagonController.steeringTarget = 0;
