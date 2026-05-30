@@ -45,6 +45,7 @@ export class MyGameController {
         this.wagonController.position[0] = -40;
         this.wagonController.position[2] = -40;
         this.wagonController.heading = -Math.PI/4;
+        this._baleBatchSize = 8;
         
         this.wagon = new MyWagon(scene, this.wagonController);
 
@@ -168,14 +169,18 @@ export class MyGameController {
         this.barn.position[1] = this._sampleGroundY(this.barn.position[0], this.barn.position[2]);
     }
 
-    // ---- Spawning ----
-    _spawnWorld() {
-        const RANGE = 28;                // half-extent of play area around spawn
+    _spawnBales(count) {
+        const RANGE = 28;
         const onPath = this.scene.onPath ?? (() => false);
         const [deliveryX, , deliveryZ] = this._barnDeliveryCenter();
-        const placed = [{ x: 0, z: 0, r: 3 }];                          // wagon spawn buffer
+        const placed = [{ x: 0, z: 0, r: 3 }];
         placed.push({ x: this.barn.position[0], z: this.barn.position[2], r: this.barn.activationRadius + 1 });
         placed.push({ x: deliveryX, z: deliveryZ, r: this.barn.activationRadius + 1 });
+
+        for (const bale of this.bales) {
+            if (!bale || !bale.position) continue;
+            placed.push({ x: bale.position[0], z: bale.position[2], r: bale.radius + 0.2 });
+        }
 
         const tryPlace = (minR, maxTries = 40) => {
             for (let t = 0; t < maxTries; t++) {
@@ -192,13 +197,18 @@ export class MyGameController {
             return null;
         };
 
-        // Bales
-        const baleCount = 8;
-        for (let i = 0; i < baleCount; i++) {
+        for (let i = 0; i < count; i++) {
             const p = tryPlace(1.5);
             if (!p) continue;
-            this.bales.push(new MyHayBale(this.scene, [p[0], 0, p[1]]));
+            const bale = new MyHayBale(this.scene, [p[0], 0, p[1]]);
+            bale.position[1] = this._sampleGroundY(p[0], p[1]);
+            this.bales.push(bale);
         }
+    }
+
+    // ---- Spawning ----
+    _spawnWorld() {
+        this._spawnBales(this._baleBatchSize);
     }
 
     _pressed(code) { return this.keys.has(code) && !this.prevKeys.has(code); }
@@ -423,9 +433,19 @@ export class MyGameController {
             // Restore some HP per delivery batch
             w.hp = Math.min(w.maxHp, w.hp + 15);
             this.lastRestore = this.score;
+            this._maybeRefillBales();
             return true;
         }
         return false;
+    }
+
+    _maybeRefillBales() {
+        const hasFreeBales = this.bales.some(b => b.state === 'free');
+        if (hasFreeBales) return;
+        if (this.wagonController.bales.length > 0) return;
+        if (this.state !== 'running') return;
+
+        this._spawnBales(this._baleBatchSize);
     }
 
     _reset() {
