@@ -1,4 +1,4 @@
-import { CGFobject, CGFappearance, CGFtexture } from '../lib/CGF.js';
+import { CGFobject, CGFappearance, CGFtexture } from '../../lib/CGF.js';
 
 // Hay bale - State machine:
 //   'free'      -> sits on ground at this.position; arrow renders above it

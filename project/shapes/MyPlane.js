@@ -1,4 +1,4 @@
-import {CGFobject} from '../lib/CGF.js';
+import {CGFobject} from '../../lib/CGF.js';
 
 export class MyPlane extends CGFobject {
 	constructor(scene, nrDivs, minS, maxS, minT, maxT) {

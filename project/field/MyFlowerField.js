@@ -1,8 +1,8 @@
-import {CGFobject} from '../lib/CGF.js';
+import {CGFobject} from '../../lib/CGF.js';
 import {MyStem}   from './MyStem.js';
 import {MyLeaf}   from './MyLeaf.js';
 import {MyPetal}  from './MyPetal.js';
-import {MySphere} from './MySphere.js';
+import { MySphere } from '../shapes/MySphere.js';
 
 // Bakes a list of flower instances into one batched mesh, like MyGrassField does for
 // blades. Per-flower transforms are baked into vertex positions at construction; the

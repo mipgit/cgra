@@ -1,4 +1,4 @@
-import { CGFobject } from '../lib/CGF.js';
+import { CGFobject } from '../../lib/CGF.js';
 
 // Pinpointing arrow — a cone with apex pointing down, base up. Controller
 // reuses one instance for every visible free bale; per-instance bob/pulse

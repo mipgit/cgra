@@ -1,7 +1,7 @@
-import { CGFobject, CGFappearance, CGFtexture } from "../lib/CGF.js";
-import { MyUnitCubeQuad } from "./MyUnitCubeQuad.js";
+import { CGFobject, CGFappearance, CGFtexture } from "../../lib/CGF.js";
+import { MyUnitCubeQuad } from "../shapes/MyUnitCubeQuad.js";
 import { MyWagonWheel } from "./MyWagonWheel.js";
-import { MyHalfCylinder } from "./MyHalfCylinder.js";
+import { MyHalfCylinder } from "../shapes/MyHalfCylinder.js";
 
 /**
  * Displays the wagon model with controller-provided state.

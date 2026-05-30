@@ -1,4 +1,4 @@
-import {CGFobject} from '../lib/CGF.js';
+import {CGFobject} from '../../lib/CGF.js';
 
 // Bakes a chunk of grass blade positions into one CGFobject (one draw call).
 // Keep each instance under 5000 blades to stay within the Uint16 index limit.
