@@ -101,8 +101,8 @@ export class MyScene extends CGFscene {
 
     this.deadGrassShader = new CGFshader(this.gl, "shaders/grass.vert", "shaders/grass.frag");
     this.deadGrassShader.setUniformsValues({
-        uColor: [0.52, 0.42, 0.14, 1.0], uWindStrength: 0.04, uWindSpeed: 0.8,
-        uTime: 0.0, uHeightmap: 1, uHeightScale: 7.0,
+      uColor: [0.31, 0.21, 0.0, 1.0], uWindStrength: 0.02, uWindSpeed: 0.6,
+      uTime: 0.0, uHeightmap: 1, uHeightScale: 7.0,
     });
 
     this.windStrength = 0.08;
@@ -372,6 +372,22 @@ export class MyScene extends CGFscene {
         return fields;
     };
 
+    const deadPatchRegions = [
+      { x: -58, z: -44, radius: 1.5 },
+      { x: -34, z: -28, radius: 2.0 },
+      { x: -12, z: 25, radius: 2.5 },
+      { x: 40, z: 0, radius: 2.0 },
+    ];
+
+    const insideDeadPatch = (x, z) => {
+      for (const region of deadPatchRegions) {
+        const dx = x - region.x;
+        const dz = z - region.z;
+        if (dx * dx + dz * dz <= region.radius * region.radius) return true;
+      }
+      return false;
+    };
+
     const greenPositions = [];
     const gridStep = 2;
     for (let gx = -DETAIL_EDGE; gx <= DETAIL_EDGE; gx += gridStep) {
@@ -383,7 +399,7 @@ export class MyScene extends CGFscene {
                 const r = Math.sqrt(Math.random()) * 2.2;
                 const x = cx + Math.cos(angle) * r;
                 const z = cz + Math.sin(angle) * r;
-                if (onPath(x, z) || tooFar(x, z)) continue;
+                if (onPath(x, z) || tooFar(x, z) || insideDeadPatch(x, z)) continue;
                 greenPositions.push({
                     x, z, rot: Math.random() * Math.PI * 2,
                     tilt: (Math.random() - 0.5) * 0.4, scale: 0.18 + Math.random() * 0.2,
@@ -394,24 +410,36 @@ export class MyScene extends CGFscene {
     this.grassFields = makeFields(greenPositions);
 
     const deadPositions = [];
-    for (let i = 0; i < 18; i++) {
-        const pcx = (Math.random() - 0.5) * 2 * DETAIL_EDGE;
-        const pcz = (Math.random() - 0.5) * 2 * DETAIL_EDGE;
-        if (onPath(pcx, pcz) || tooFar(pcx, pcz)) continue;
-        const count = 25 + Math.floor(Math.random() * 30);
-        for (let j = 0; j < count; j++) {
-            const angle = Math.random() * Math.PI * 2;
-            const r = Math.sqrt(Math.random()) * 3.5;
-            const x = pcx + Math.cos(angle) * r;
-            const z = pcz + Math.sin(angle) * r;
+    const fillDeadPatch = (centerX, centerZ, radius) => {
+      const step = 0.42;
+      for (let dx = -radius; dx <= radius; dx += step) {
+        for (let dz = -radius; dz <= radius; dz += step) {
+          const dist2 = dx * dx + dz * dz;
+          if (dist2 > radius * radius) continue;
+
+          const cells = 2 + Math.floor(Math.random() * 3);
+          for (let i = 0; i < cells; i++) {
+            const x = centerX + dx + (Math.random() - 0.5) * step * 0.7;
+            const z = centerZ + dz + (Math.random() - 0.5) * step * 0.7;
             if (onPath(x, z) || tooFar(x, z)) continue;
             deadPositions.push({
-                x, z, rot: Math.random() * Math.PI * 2,
-                tilt: (Math.random() - 0.5) * 0.6, scale: 0.18 + Math.random() * 0.22,
+              x,
+              z,
+              rot: Math.random() * Math.PI * 2,
+              tilt: (Math.random() - 0.5) * 0.16,
+              scale: 0.16 + Math.random() * 0.10,
             });
+          }
         }
+      }
+    };
+
+    for (const region of deadPatchRegions) {
+      fillDeadPatch(region.x, region.z, region.radius);
     }
+
     this.deadGrassFields = makeFields(deadPositions);
+    this._deadPositions = deadPositions;
 
     this.rockInstances = [];
     for (let p = 0; p < 14; p++) {
@@ -537,7 +565,7 @@ export class MyScene extends CGFscene {
     this.grassShader.setUniformsValues({ uTime: now });
     for (const f of this.grassFields) f.display();
     this.setActiveShader(this.deadGrassShader);
-    this.deadGrassShader.setUniformsValues({ uTime: now });
+    this.deadGrassShader.setUniformsValues({ uTime: now, uColor: [0.31, 0.21, 0.0, 1.0] });
     for (const f of this.deadGrassFields) f.display();
     this.setActiveShader(this.defaultShader);
     this.gl.enable(this.gl.CULL_FACE);
