@@ -353,9 +353,9 @@ export class MyGameController {
         };
 
         // Verifica colisão com todas as Pedras geradas na cena
-        // Multiplicamos o scale por 1.2 porque as pedras são largas
+        // raio de colisão mais apertado para evitar bloquear o movimento ao lado
         for (const rock of this.scene.rockInstances) {
-            applyCollision(rock.x, rock.z, rock.scale * 1.2);
+            applyCollision(rock.x, rock.z, rock.scale * 0.3);
         }
 
         // Verifica colisão com todas as Árvores geradas na cena
