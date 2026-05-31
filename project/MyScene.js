@@ -277,6 +277,12 @@ export class MyScene extends CGFscene {
 
     const jitterPct = (pct) => 1.0 + (Math.random() - 0.5) * 2 * pct;
 
+    const isNearWagon = (x, z) => {
+      const dx = x - (-40);
+      const dz = z - (-40);
+      return (dx * dx + dz * dz) < 9.0; // 3 units radius squared
+    };
+
     const makeFlower = (pcx, pcz, spread, species) => {
       const angle = Math.random() * Math.PI * 2;
       const r = Math.sqrt(Math.random()) * spread;
@@ -369,7 +375,7 @@ export class MyScene extends CGFscene {
       const sp = makeSpecies();
       for (let f = 0; f < randi(10, 14); f++) {
         const fl = makeFlower(0, 0, 2.5, sp);
-        if (!onPath(fl.x, fl.z) && !tooFar(fl.x, fl.z)) this.flowerInstances.push(fl);
+        if (!onPath(fl.x, fl.z) && !tooFar(fl.x, fl.z) && !isNearWagon(fl.x, fl.z)) this.flowerInstances.push(fl);
       }
     }
 
@@ -382,7 +388,7 @@ export class MyScene extends CGFscene {
       const flowersInPatch = randi(10, 22);
       for (let f = 0; f < flowersInPatch; f++) {
         const fl = makeFlower(pcx, pcz, rand(3.0, 5.5), sp);
-        if (!onPath(fl.x, fl.z) && !tooFar(fl.x, fl.z)) this.flowerInstances.push(fl);
+        if (!onPath(fl.x, fl.z) && !tooFar(fl.x, fl.z) && !isNearWagon(fl.x, fl.z)) this.flowerInstances.push(fl);
       }
     }
 
@@ -479,7 +485,7 @@ export class MyScene extends CGFscene {
             const r = Math.sqrt(Math.random()) * 4.0;
             const x = pcx + Math.cos(angle) * r;
             const z = pcz + Math.sin(angle) * r;
-            if (onPath(x, z) || tooFar(x, z)) continue;
+            if (onPath(x, z) || tooFar(x, z) || isNearWagon(x, z)) continue;
             this.rockInstances.push({
                 x, z, rotY: Math.random() * Math.PI * 2, scale: 1.0 + Math.random() * 2.0,
             });
@@ -500,7 +506,7 @@ export class MyScene extends CGFscene {
         const r = Math.sqrt(Math.random()) * 5.0;
         const x = pcx + Math.cos(angle) * r;
         const z = pcz + Math.sin(angle) * r;
-        if (onPath(x, z) || tooFar(x, z)) continue;
+        if (onPath(x, z) || tooFar(x, z) || isNearWagon(x, z)) continue;
         this.treeInstances.push({
           x, z, rotY: Math.random() * Math.PI * 2, scale: 1.0 + Math.random() * 1.2,
         });
