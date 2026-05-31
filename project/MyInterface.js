@@ -42,6 +42,8 @@ export class MyInterface extends CGFinterface {
         cloudsFolder.add(this.scene, 'shaderCloudDensity', 0.2, 0.7, 0.02).name('Cutoff');
         cloudsFolder.open();
 
+
+
         return true;
     }
 }

@@ -2,6 +2,7 @@ import { CGFobject, CGFappearance, CGFtexture } from "../../lib/CGF.js";
 import { MyUnitCubeQuad } from "../shapes/MyUnitCubeQuad.js";
 import { MyWagonWheel } from "./MyWagonWheel.js";
 import { MyHalfCylinder } from "../shapes/MyHalfCylinder.js";
+import { MyHorse } from "../MyHorse.js";
 
 /**
  * Displays the wagon model with controller-provided state.
@@ -16,6 +17,7 @@ export class MyWagon extends CGFobject {
         this.box = new MyUnitCubeQuad(scene);
         this.wheel = new MyWagonWheel(scene);
         this.halfCylinder = new MyHalfCylinder(scene, 6, 1);
+        this.horse = new MyHorse(scene);
 
         this.initMaterials(); 
     }
@@ -90,6 +92,12 @@ export class MyWagon extends CGFobject {
         this.scene.translate(5.0, 1.5, 0);
         this.scene.scale(0.2, 0.2, 1.5);
         this.box.display();
+        this.scene.popMatrix();
+
+        const horseLocalY = (this.controller.horseLocalY ?? 0);
+        this.scene.pushMatrix();
+        this.scene.translate(5.5, horseLocalY, 0);
+        this.horse.displayModel(this.controller);
         this.scene.popMatrix();
 
         // Axles

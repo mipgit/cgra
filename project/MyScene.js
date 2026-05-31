@@ -133,6 +133,8 @@ export class MyScene extends CGFscene {
     this._hmReady = false;
     this._pathReady = false;
     this._worldGenerated = false;
+
+
   }
 
   update(t) {
@@ -611,7 +613,6 @@ export class MyScene extends CGFscene {
     this.setActiveShader(this.defaultShader);
     this.gl.enable(this.gl.CULL_FACE);
 
-    // Controller (Wagon, Barn, Bales)
     if (this.controller) {
       this.setActiveShader(this.defaultShader);
       this.controller.display();
