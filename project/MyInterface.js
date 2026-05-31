@@ -34,11 +34,6 @@ export class MyInterface extends CGFinterface {
 
 
         
-        // Dropdown for sky texture selection
-        this.gui.add(this.scene, 'selectedTexture', ['just_blue', 'cloudy_sky', 'farm_road'])
-              .name('sky')
-              .onChange(() => this.scene.updateTexture());
-
         // Enhanced Clouds controls
         const cloudsFolder = this.gui.addFolder('Enhanced Clouds');
         cloudsFolder.add(this.scene, 'cloudSpeed', 0.0, 4.0, 0.1).name('Wind Speed');

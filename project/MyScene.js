@@ -35,12 +35,8 @@ export class MyScene extends CGFscene {
     this.sphere = new MySphere(this, 50, 50);
     this.terrain = new MyPlane(this, 100);
     
-    // Load all sky textures
-    this.textures = {
-      'just_blue': new CGFtexture(this, "textures/just_blue.jpg"),
-      'cloudy_sky': new CGFtexture(this, "textures/basic.jpg"),
-      'farm_road': new CGFtexture(this, "textures/farm_road.jpg")
-    };
+    // Load sky texture
+    this.skyTexture = new CGFtexture(this, "textures/just_blue.jpg");
     
     this.skyShader = new CGFshader(this.gl, "shaders/skyglow.vert", "shaders/skyglow.frag");
 
@@ -50,8 +46,7 @@ export class MyScene extends CGFscene {
     this.skyAppearance.setSpecular(0, 0, 0, 1);
     this.skyAppearance.setEmission(0, 0, 0, 1);
     this.skyAppearance.setShininess(120);
-    this.selectedTexture = 'just_blue';
-    this.skyAppearance.setTexture(this.textures[this.selectedTexture]);
+    this.skyAppearance.setTexture(this.skyTexture);
     this.skyAppearance.setTextureWrap('REPEAT', 'REPEAT');
 
     this.sunAppearance = new CGFappearance(this);
@@ -202,10 +197,6 @@ export class MyScene extends CGFscene {
     this.setDiffuse(0.6, 0.6, 0.6, 1.0);
     this.setSpecular(0.2, 0.2, 0.2, 1.0);
     this.setShininess(10.0);
-  }
-
-  updateTexture() {
-    this.skyAppearance.setTexture(this.textures[this.selectedTexture]);
   }
 
   _ensureHeightmap() {
