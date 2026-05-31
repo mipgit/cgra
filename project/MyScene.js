@@ -6,6 +6,7 @@ import { MyFlowerField } from "./MyFlowerField.js";
 import { MyRockField } from "./static_elements/MyRockField.js";
 import { MyTreeField } from "./static_elements/MyTreeField.js";
 import { MyGameController } from "./MyGameController.js";
+import { MyHorse } from "./MyHorse.js";
 
 /**
  * MyScene
@@ -349,6 +350,15 @@ export class MyScene extends CGFscene {
     this.controller = new MyGameController(this, {
       heightScale: 7.0, terrainHalfExtent: 100.0, heightmapUrl: 'textures/heightmap.png',
     });
+
+    // Debug test horse — separate from the controller's wagon-bound horse.
+    // When `horseTestMode` is true, the wagon (and rest of the controller)
+    // stops rendering and this horse is drawn at world origin instead. The
+    // `horseTestSlot` value (0..3) picks which of the 4 spliced OBJs shows.
+    this.horseTestMode = false;
+    this.horseTestSlot = 0;
+    this._testHorse = new MyHorse(this);
+
     this.setUpdatePeriod(1000 / 60);
     this._lastT = null;
     this._hmReady = false;
@@ -508,8 +518,21 @@ export class MyScene extends CGFscene {
     this.setActiveShader(this.defaultShader);
     this.gl.enable(this.gl.CULL_FACE);
 
-    // Controller (Wagon, Barn, Bales)
-    if (this.controller) {
+    // Test horse mode — show one isolated horse so we can pick which OBJ
+    // is being rendered via the GUI dropdown; skip the rest of the controller.
+    if (this.horseTestMode && this._testHorse) {
+      this.setActiveShader(this.defaultShader);
+      // Sample ground at origin so the test horse sits on the terrain.
+      let groundY = 0;
+      if (this.controller && this.controller._sampleGroundY) {
+        groundY = this.controller._sampleGroundY(0, 0);
+      }
+      this._testHorse.overrideSlot = this.horseTestSlot;
+      this.pushMatrix();
+      this.translate(0, groundY, 0);
+      this._testHorse.displayModel(null);
+      this.popMatrix();
+    } else if (this.controller) {
       this.setActiveShader(this.defaultShader);
       this.controller.display();
     }

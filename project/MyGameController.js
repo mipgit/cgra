@@ -113,6 +113,9 @@ export class MyGameController {
         const RANGE = 28;                // half-extent of play area around spawn
         const onPath = this.scene.onPath ?? (() => false);
         const placed = [{ x: 0, z: 0, r: 3 }];                          // wagon spawn buffer
+        // Horse rides 6.0 units in front of the wagon along +X at heading 0 —
+        // reserve clearance so spawned obstacles don't intersect the horse.
+        placed.push({ x: 6.0, z: 0, r: 2 });
         placed.push({ x: this.barn.position[0], z: this.barn.position[2], r: this.barn.activationRadius + 1 });
 
         const tryPlace = (minR, maxTries = 40) => {
@@ -165,8 +168,27 @@ export class MyGameController {
         // Wagon integrates physics regardless of state (settles after gameover)
         this.wagonController.update(dt, this.sampleGroundY);
 
+        // Sample terrain at the horse's world position so the wagon can place
+        // it at the correct height (mountains should lift the horse, not
+        // swallow it). The horse rides 6.0 units in front of the wagon along
+        // its forward direction.
+        {
+            const w = this.wagonController;
+            const HORSE_OFFSET = 6.0;
+            const fX =  Math.cos(w.heading);
+            const fZ = -Math.sin(w.heading);
+            const horseWX = w.position[0] + fX * HORSE_OFFSET;
+            const horseWZ = w.position[2] + fZ * HORSE_OFFSET;
+            const horseGroundY = this._sampleGroundY(horseWX, horseWZ);
+            // Wagon's display is offset by wagon.position[1]; the horse sits
+            // at horseGroundY in world, so its local Y in wagon space is the
+            // delta. Used by MyWagon when translating to the horse's slot.
+            w.horseLocalY = horseGroundY - w.position[1];
+        }
+
         if (this.state === 'running') {
             this._handleRockCollisions();
+            this._handleHorseCollisions();
             this._handlePickupDrop();
             this._handleDelivery();
             if (this.wagonController.hp <= 0) this.state = 'gameover';
@@ -294,6 +316,44 @@ export class MyGameController {
         for (const tree of this.scene.treeInstances) {
             applyCollision(tree.x, tree.z, tree.scale * 0.4);
         }
+    }
+
+    // Same rocks + trees check, but at the horse's world position. Since the
+    // horse rides rigidly in front of the wagon (translate(6.5, 0, 0) inside
+    // wagon.displayModel()), it sticks out past the wagon body and would
+    // ghost through obstacles otherwise. Push direction is from obstacle →
+    // horse, applied to the wagon's position (horse follows for free).
+    _handleHorseCollisions() {
+        const w = this.wagonController;
+        const HORSE_OFFSET = 6.0;   // matches MyWagon.displayModel translate
+        const HORSE_RADIUS = 0.7;   // horse body collision radius
+
+        // Same forward direction the controller uses for movement
+        const fX =  Math.cos(w.heading);
+        const fZ = -Math.sin(w.heading);
+        const horseX = w.position[0] + fX * HORSE_OFFSET;
+        const horseZ = w.position[2] + fZ * HORSE_OFFSET;
+
+        const check = (objX, objZ, objRadius) => {
+            const dx = horseX - objX;
+            const dz = horseZ - objZ;
+            const d2 = dx*dx + dz*dz;
+            const r = objRadius + HORSE_RADIUS;
+            if (d2 >= r * r) return;
+            if (this.elapsed - this._lastRockHitT > 0.4) {
+                w.hp = Math.max(0, w.hp - 10);
+                this.lastDamage = this.score;
+                this._lastRockHitT = this.elapsed;
+            }
+            const d = Math.sqrt(d2) || 0.0001;
+            const push = (r - d) + 0.04;
+            w.position[0] += (dx / d) * push;
+            w.position[2] += (dz / d) * push;
+            w.speed *= 0.3;
+        };
+
+        for (const rock of this.scene.rockInstances) check(rock.x, rock.z, rock.scale * 1.2);
+        for (const tree of this.scene.treeInstances) check(tree.x, tree.z, tree.scale * 0.4);
     }
 
     _handlePickupDrop() {

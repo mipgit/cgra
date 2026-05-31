@@ -2,6 +2,7 @@ import { CGFobject, CGFappearance, CGFtexture } from "../lib/CGF.js";
 import { MyUnitCubeQuad } from "./MyUnitCubeQuad.js";
 import { MyWagonWheel } from "./MyWagonWheel.js";
 import { MyHalfCylinder } from "./MyHalfCylinder.js";
+import { MyHorse } from "./MyHorse.js";
 
 /**
  * Displays the wagon model with controller-provided state.
@@ -16,6 +17,7 @@ export class MyWagon extends CGFobject {
         this.box = new MyUnitCubeQuad(scene);
         this.wheel = new MyWagonWheel(scene);
         this.halfCylinder = new MyHalfCylinder(scene, 6, 1);
+        this.horse = new MyHorse(scene);
 
         this.initMaterials(); 
     }
@@ -90,6 +92,18 @@ export class MyWagon extends CGFobject {
         this.scene.translate(5.0, 1.5, 0);
         this.scene.scale(0.2, 0.2, 1.5);
         this.box.display();
+        this.scene.popMatrix();
+
+        // Horse — positioned so the wagon's tongue tip (x=5.5 local) meets the
+        // horse's rear. The horse mesh extends ~±1.8 units fore/aft in its
+        // own local space; with translate(7.5, ...) the rear lands at world
+        // x ≈ 5.7, just past the tongue tip. The Y delta is set by the
+        // controller each frame so the horse follows terrain at its own
+        // position (climbs hills instead of clipping through them).
+        const horseLocalY = (this.controller.horseLocalY ?? 0);
+        this.scene.pushMatrix();
+        this.scene.translate(6.0, horseLocalY, 0);
+        this.horse.displayModel(this.controller);
         this.scene.popMatrix();
 
         // Axles
