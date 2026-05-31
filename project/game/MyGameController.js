@@ -454,18 +454,51 @@ export class MyGameController {
             const lx = dx * cosH - dz * sinH;
             const lz = dx * sinH + dz * cosH;
 
-            // Wagon dimensions: length 5.0 (half 2.5), width 2.5 (half 1.25)
-            const halfL = 2.5;
-            const halfW = 1.25;
+            // Collision system using two zones to perfectly model the wagon body and the front horses:
+            // Zone 1: Body of the Wagon (including the side wheels)
+            // Local X: -2.5 to 2.5, Local Z: -1.6 to 1.6 (width 3.2)
+            const minX1 = -2.5, maxX1 = 2.5;
+            const minZ1 = -1.6, maxZ1 = 1.6;
 
-            const closestX = Math.max(-halfL, Math.min(halfL, lx));
-            const closestZ = Math.max(-halfW, Math.min(halfW, lz));
+            // Zone 2: Pair of horses at the front (extending to their heads)
+            // Local X: 2.5 to 8.0 (extended forward to 8.0 to fully cover the horses' heads)
+            // Local Z: -3.2 to 3.2 (width 6.4, wide enough to prevent side clipping for the horses)
+            const minX2 = 2.5, maxX2 = 8.0;
+            const minZ2 = -3.2, maxZ2 = 3.2;
 
-            const diffX = lx - closestX;
-            const diffZ = lz - closestZ;
-            const distSq = diffX * diffX + diffZ * diffZ;
+            // --- Zone 1: Body of the Wagon ---
+            const closestX1 = Math.max(minX1, Math.min(maxX1, lx));
+            const closestZ1 = Math.max(minZ1, Math.min(maxZ1, lz));
+            const diffX1 = lx - closestX1;
+            const diffZ1 = lz - closestZ1;
+            const distSq1 = diffX1 * diffX1 + diffZ1 * diffZ1;
 
-            if (distSq >= circleR * circleR) return null;
+            // --- Zone 2: Horses ---
+            const closestX2 = Math.max(minX2, Math.min(maxX2, lx));
+            const closestZ2 = Math.max(minZ2, Math.min(maxZ2, lz));
+            const diffX2 = lx - closestX2;
+            const diffZ2 = lz - closestZ2;
+            const distSq2 = diffX2 * diffX2 + diffZ2 * diffZ2;
+
+            // Determine if either zone collided (Body or Horses)
+            const collided1 = distSq1 < circleR * circleR;
+            const collided2 = distSq2 < circleR * circleR;
+
+            if (!collided1 && !collided2) return null;
+
+            // Select the colliding zone (or the deeper one if both collide)
+            const useBox2 = collided2 && (!collided1 || distSq2 < distSq1);
+
+            const minX = useBox2 ? minX2 : minX1;
+            const maxX = useBox2 ? maxX2 : maxX1;
+            const minZ = useBox2 ? minZ2 : minZ1;
+            const maxZ = useBox2 ? maxZ2 : maxZ1;
+
+            const closestX = useBox2 ? closestX2 : closestX1;
+            const closestZ = useBox2 ? closestZ2 : closestZ1;
+            const diffX = useBox2 ? diffX2 : diffX1;
+            const diffZ = useBox2 ? diffZ2 : diffZ1;
+            const distSq = useBox2 ? distSq2 : distSq1;
 
             let overlap, pushWx, pushWz;
             if (distSq > 0.0001) {
@@ -478,16 +511,26 @@ export class MyGameController {
                 pushWx = localPushX * cosH + localPushZ * sinH;
                 pushWz = -localPushX * sinH + localPushZ * cosH;
             } else {
-                const overlapX = halfL - Math.abs(lx);
-                const overlapZ = halfW - Math.abs(lz);
+                // If circle center is inside the selected zone, push out along the shallowest axis
+                const overlapMinX = lx - minX;
+                const overlapMaxX = maxX - lx;
+                const overlapMinZ = lz - minZ;
+                const overlapMaxZ = maxZ - lz;
+
+                const minOverlap = Math.min(overlapMinX, overlapMaxX, overlapMinZ, overlapMaxZ);
                 let localPushX = 0, localPushZ = 0;
-                if (overlapX < overlapZ) {
-                    localPushX = lx >= 0 ? 1 : -1;
-                    overlap = overlapX + circleR;
+
+                if (minOverlap === overlapMinX) {
+                    localPushX = -1;
+                } else if (minOverlap === overlapMaxX) {
+                    localPushX = 1;
+                } else if (minOverlap === overlapMinZ) {
+                    localPushZ = -1;
                 } else {
-                    localPushZ = lz >= 0 ? 1 : -1;
-                    overlap = overlapZ + circleR;
+                    localPushZ = 1;
                 }
+
+                overlap = minOverlap + circleR;
                 pushWx = localPushX * cosH + localPushZ * sinH;
                 pushWz = -localPushX * sinH + localPushZ * cosH;
             }
@@ -579,32 +622,36 @@ export class MyGameController {
             const headingW = w.heading;
 
             // Centers
-            const cAx = w.position[0];
-            const cAz = w.position[2];
+            // Shift the wagon center forward along its heading to account for the wagon body and the horses
+            // The combined volume ranges from local X = -2.5 to X = +8.0. Total length is 10.5, half-length is 5.25.
+            // Center is shifted forward by (8.0 - 2.5)/2 = 2.75 units (horses area).
+            const shift = 2.75;
+            const cAx = w.position[0] + Math.cos(headingW) * shift;
+            const cAz = w.position[2] - Math.sin(headingW) * shift;
             const cBx = this.barn.position[0];
             const cBz = this.barn.position[2];
 
-            // Distance vector T from A (Wagon) to B (Barn)
+            // Distance vector T from Wagon and Horses (A) to Barn (B)
             const Tx = cBx - cAx;
             const Tz = cBz - cAz;
 
-            // Box A (Wagon) local axes in world space
+            // Local axes of the Wagon and Horses (Area A) in world space
             const U0Ax = Math.cos(headingW);
             const U0Az = -Math.sin(headingW);
             const U1Ax = Math.sin(headingW);
             const U1Az = Math.cos(headingW);
 
-            const e0A = 2.5;  // Wagon half-length (local X)
-            const e1A = 1.25; // Wagon half-width (local Z)
+            const e0A = 5.25; // Half-length of the Wagon and Horses (local X)
+            const e1A = 3.2;  // Half-width of the Wagon and Horses (local Z)
 
-            // Box B (Barn) local axes in world space
+            // Local axes of the Barn (Area B) in world space
             const U0Bx = Math.cos(rotB);
             const U0Bz = -Math.sin(rotB);
             const U1Bx = Math.sin(rotB);
             const U1Bz = Math.cos(rotB);
 
-            const e0B = 2.0 * this.barn.scale; // Barn half-width (local X) = 6.0
-            const e1B = 2.5 * this.barn.scale; // Barn half-depth (local Z) = 7.5
+            const e0B = 2.0 * this.barn.scale; // Half-width of the Barn (local X) = 6.0
+            const e1B = 2.5 * this.barn.scale; // Half-depth of the Barn (local Z) = 7.5
 
             // The 4 candidate separating axes to test
             const axes = [
@@ -627,10 +674,10 @@ export class MyGameController {
                 // Project center distance onto separating axis L
                 const D = Math.abs(Tx * Lx + Tz * Lz);
 
-                // Project Box A (Wagon) radius onto separating axis L
+                // Project Wagon and Horses (Area A) radius onto separating axis L
                 const RA = e0A * Math.abs(U0Ax * Lx + U0Az * Lz) + e1A * Math.abs(U1Ax * Lx + U1Az * Lz);
 
-                // Project Box B (Barn) radius onto separating axis L
+                // Project Barn (Area B) radius onto separating axis L
                 const RB = e0B * Math.abs(U0Bx * Lx + U0Bz * Lz) + e1B * Math.abs(U1Bx * Lx + U1Bz * Lz);
 
                 const R = RA + RB;
