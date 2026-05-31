@@ -10,7 +10,9 @@ export class MyHayBale extends CGFobject {
     constructor(scene, position) {
         super(scene);
         this.position = position;       // [x, y, z]
+        this.initialPosition = [...position];
         this.heading  = Math.random() * Math.PI * 2; // visual variety
+        this.initialHeading = this.heading;
         this.pitch    = 0;
         this.size     = { x: 0.7, y: 0.55, z: 0.9 };
         this.radius   = 0.6;            // pickup proximity

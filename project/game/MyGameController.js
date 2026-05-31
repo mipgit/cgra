@@ -612,9 +612,11 @@ export class MyGameController {
 
     _reset() {
         this.wagonController.position = [-40, 0, -40];
-        this.wagonController.heading = 0;
-        this.wagonController.steering = 0;
+        this.wagonController.heading = -Math.PI/4;
+        this.wagonController.steeringAngle = 0;
         this.wagonController.steeringTarget = 0;
+        this.wagonController.frontWheelAngle = 0;
+        this.wagonController.rearWheelAngle = 0;
         this.wagonController.speed = 0;
         this.wagonController.hp = this.wagonController.maxHp;
         this.hp = this.wagonController.maxHp;
@@ -625,7 +627,15 @@ export class MyGameController {
         this.lastDamage = 0;
         this.lastRestore = 0;
         this._lastRockHitT = -1;
-        for (const b of this.bales) { b.state = 'free'; }
+
+        // Keep only the initial batch of bales and reset them
+        this.bales = this.bales.slice(0, this._baleBatchSize);
+        for (const b of this.bales) {
+            b.state = 'free';
+            b.position = [...b.initialPosition];
+            b.heading = b.initialHeading;
+        }
+
         this._reseatToGround();
         this.state = 'running';
     }
