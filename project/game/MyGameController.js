@@ -765,25 +765,32 @@ export class MyGameController {
     // ---- Drawing ----
     display() {
         const s = this.scene;
+        const wPos = this.wagonController.position;
 
         // Standard-shaded world objects
         s.setActiveShader(s.defaultShader);
-        for (const b of this.bales) b.display();
+        for (const b of this.bales) {
+            // Bale visibility: only show if near the wagon or if not free (carried/stored)
+            const dx = b.position[0] - wPos[0];
+            const dz = b.position[2] - wPos[2];
+            const isNear = (dx*dx + dz*dz) < 20 * 20;
+            if (b.state !== 'free' || isNear) {
+                b.display();
+            }
+        }
         this.barn.deliveryCenter = this._barnDeliveryCenter();
         this.barn.display();
         this.wagon.display();
 
-        // Pin arrows above visible free bales (custom shader, no culling because
-        // the cone is shaded purely on emission and we don't care about backfaces)
+        // Pin arrows above free bales
         const now = performance.now() / 1000;
         s.gl.disable(s.gl.CULL_FACE);
         s.setActiveShader(this.pinArrowShader);
         for (let i = 0; i < this.bales.length; i++) {
             const bale = this.bales[i];
             if (bale.state !== 'free') continue;
-            const dx = bale.position[0] - this.wagonController.position[0];
-            const dz = bale.position[2] - this.wagonController.position[2];
-            if (dx*dx + dz*dz > 40 * 40) continue; // near-visibility filter
+            
+            // Arrows are always visible for free bales
             this.pinArrowShader.setUniformsValues({
                 uTime: now,
                 uPhase: i * 1.7,
