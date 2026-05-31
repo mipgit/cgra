@@ -451,18 +451,88 @@ export class MyGameController {
             }
         }
 
-        // 3. Barn Collision
+        // 3. Barn Collision (Direct OBB vs OBB via Separating Axis Theorem)
         if (this.barn) {
-            const offsets = [-1.75, 0.0, 1.75]; // Back, Center, Front
-            for (const offset of offsets) {
-                const cx = w.position[0] + offset * Math.cos(w.heading);
-                const cz = w.position[2] - offset * Math.sin(w.heading); // Correct mirrored Z-axis projection
-                const collision = checkCircleCollisionWithBarn(cx, cz, 1.25);
-                if (collision) {
-                    w.position[0] += collision.pushX;
-                    w.position[2] += collision.pushZ;
-                    w.speed *= -0.2; // slight bounce
+            const rotB = this.barn.rotation;
+            const headingW = w.heading;
+
+            // Centers
+            const cAx = w.position[0];
+            const cAz = w.position[2];
+            const cBx = this.barn.position[0];
+            const cBz = this.barn.position[2];
+
+            // Distance vector T from A (Wagon) to B (Barn)
+            const Tx = cBx - cAx;
+            const Tz = cBz - cAz;
+
+            // Box A (Wagon) local axes in world space
+            const U0Ax = Math.cos(headingW);
+            const U0Az = -Math.sin(headingW);
+            const U1Ax = Math.sin(headingW);
+            const U1Az = Math.cos(headingW);
+
+            const e0A = 2.5;  // Wagon half-length (local X)
+            const e1A = 1.25; // Wagon half-width (local Z)
+
+            // Box B (Barn) local axes in world space
+            const U0Bx = Math.cos(rotB);
+            const U0Bz = -Math.sin(rotB);
+            const U1Bx = Math.sin(rotB);
+            const U1Bz = Math.cos(rotB);
+
+            const e0B = 2.0 * this.barn.scale; // Barn half-width (local X) = 6.0
+            const e1B = 2.5 * this.barn.scale; // Barn half-depth (local Z) = 7.5
+
+            // The 4 candidate separating axes to test
+            const axes = [
+                { x: U0Ax, z: U0Az },
+                { x: U1Ax, z: U1Az },
+                { x: U0Bx, z: U0Bz },
+                { x: U1Bx, z: U1Bz }
+            ];
+
+            let minOverlap = Infinity;
+            let bestAxis = null;
+            let collided = true;
+
+            for (const axis of axes) {
+                const len = Math.hypot(axis.x, axis.z);
+                if (len < 1e-5) continue;
+                const Lx = axis.x / len;
+                const Lz = axis.z / len;
+
+                // Project center distance onto separating axis L
+                const D = Math.abs(Tx * Lx + Tz * Lz);
+
+                // Project Box A (Wagon) radius onto separating axis L
+                const RA = e0A * Math.abs(U0Ax * Lx + U0Az * Lz) + e1A * Math.abs(U1Ax * Lx + U1Az * Lz);
+
+                // Project Box B (Barn) radius onto separating axis L
+                const RB = e0B * Math.abs(U0Bx * Lx + U0Bz * Lz) + e1B * Math.abs(U1Bx * Lx + U1Bz * Lz);
+
+                const R = RA + RB;
+                const overlap = R - D;
+
+                if (overlap <= 0) {
+                    collided = false; // A separating axis exists, no collision!
+                    break;
                 }
+
+                if (overlap < minOverlap) {
+                    minOverlap = overlap;
+                    bestAxis = { x: Lx, z: Lz };
+                }
+            }
+
+            if (collided && bestAxis) {
+                // Determine push-out direction (away from Barn)
+                const dot = Tx * bestAxis.x + Tz * bestAxis.z;
+                const sign = dot >= 0 ? 1 : -1;
+
+                w.position[0] += -sign * bestAxis.x * minOverlap;
+                w.position[2] += -sign * bestAxis.z * minOverlap;
+                w.speed *= -0.2; // slight bounce
             }
         }
     }
