@@ -168,16 +168,15 @@ export class MyScene extends CGFscene {
   }
 
   initLights() {
-    this.lights[0].setPosition(0, 0, 0, 1);
-    this.lights[0].setAmbient(1.0, 1.0, 1.0, 1.0);  
-    this.lights[0].setDiffuse(2.0, 2.0, 2.0, 1.0);  
-    this.lights[0].setSpecular(1.5, 1.5, 1.425, 1.0);
-    this.lights[0].setSpecular(1.0, 1.0, 0.95, 1.0);
-    this.lights[0].setConstantAttenuation(1.0);
-    this.lights[0].setLinearAttenuation(0.0);
-    this.lights[0].setQuadraticAttenuation(0.0);
+    this.lights[0].setPosition(0, 1, 0, 0); // Directional light coming from above
+    this.lights[0].setAmbient(0.3, 0.3, 0.3, 1.0);  
+    this.lights[0].setDiffuse(1.0, 1.0, 1.0, 1.0);  
+    this.lights[0].setSpecular(1.0, 1.0, 1.0, 1.0);
     this.lights[0].enable();
     this.lights[0].update();
+    
+    // Global ambient light for a "whole sky" feel
+    this.setGlobalAmbientLight(0.2, 0.2, 0.2, 1.0);
   }
 
   initCameras() {
@@ -198,9 +197,9 @@ export class MyScene extends CGFscene {
 
 
   setDefaultAppearance() {
-    this.setAmbient(0.2, 0.4, 0.8, 1.0);
-    this.setDiffuse(0.2, 0.4, 0.8, 1.0);
-    this.setSpecular(0.2, 0.4, 0.8, 1.0);
+    this.setAmbient(0.2, 0.2, 0.2, 1.0);
+    this.setDiffuse(0.6, 0.6, 0.6, 1.0);
+    this.setSpecular(0.2, 0.2, 0.2, 1.0);
     this.setShininess(10.0);
   }
 
@@ -546,7 +545,7 @@ export class MyScene extends CGFscene {
     let sunDir = vec3.fromValues(sunX, sunY, sunZ);
     vec3.normalize(sunDir, sunDir);
 
-    this.lights[0].setPosition(sunX, sunY, sunZ, 1);
+    this.lights[0].setPosition(sunX, sunY, sunZ, 0);
     this.lights[0].update();
 
     if (this.displayAxis) this.axis.display();

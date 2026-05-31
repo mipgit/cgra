@@ -58,12 +58,10 @@ export class MyHollowCylinder extends CGFobject {
                 let nextNext = (j + 1) * this.slices + ((i + 1) % this.slices);
 
                 // Triangle 1
-                this.indices.push(current, currentNext, next);
-                this.indices.push(next, currentNext, current);
+                this.indices.push(current, next, currentNext);
                 
                 // Triangle 2
-                this.indices.push(next, currentNext, nextNext);
-                this.indices.push(nextNext, currentNext, next);
+                this.indices.push(next, nextNext, currentNext);
                 
                 // Calculate face normal for outer cylinder (pointing outward)
                 let i1 = current * 3;
@@ -92,11 +90,9 @@ export class MyHollowCylinder extends CGFobject {
                 let currentNext = outerVertexCount + (j + 1) * this.slices + i;
                 let nextNext = outerVertexCount + (j + 1) * this.slices + ((i + 1) % this.slices);
 
-                this.indices.push(current, next, currentNext);
-                this.indices.push(next, nextNext, currentNext);
-
-                this.indices.push(currentNext, next, current);
-                this.indices.push(currentNext, nextNext, next);
+                // Inner cylinder triangles
+                this.indices.push(current, currentNext, next);
+                this.indices.push(next, currentNext, nextNext);
                 
                 // Inward pointing normal
                 let angle = i * alphaAng;
@@ -130,10 +126,9 @@ export class MyHollowCylinder extends CGFobject {
             let innerCurrent = topInnerStart + i;
             let innerNext = topInnerStart + ((i + 1) % this.slices);
 
-            // Outer triangle
-            this.indices.push(outerCurrent, outerNext, innerNext);
-            // Inner triangle
-            this.indices.push(outerCurrent, innerNext, innerCurrent);
+            // Outer and inner triangle for top ring
+            this.indices.push(outerCurrent, outerNext, innerCurrent);
+            this.indices.push(innerCurrent, outerNext, innerNext);
         }
         // Add top face normals
         for (let i = topOuterStart; i < topOuterStart + this.slices; i++) {
@@ -156,10 +151,9 @@ export class MyHollowCylinder extends CGFobject {
             let innerCurrent = bottomInnerStart + i;
             let innerNext = bottomInnerStart + ((i + 1) % this.slices);
 
-            // Outer triangle
-            this.indices.push(outerCurrent, innerNext, outerNext);
-            // Inner triangle
-            this.indices.push(outerCurrent, innerCurrent, innerNext);
+            // Outer and inner triangle for bottom ring 
+            this.indices.push(outerCurrent, innerCurrent, outerNext);
+            this.indices.push(innerCurrent, innerNext, outerNext);
         }
         // Add bottom face normals
         for (let i = bottomOuterStart; i < bottomOuterStart + this.slices; i++) {
