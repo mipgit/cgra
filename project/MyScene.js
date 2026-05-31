@@ -37,10 +37,9 @@ export class MyScene extends CGFscene {
     
     // Load all sky textures
     this.textures = {
-      'basic': new CGFtexture(this, "textures/basic.jpg"),
-      'farm_road': new CGFtexture(this, "textures/farm_road.jpg"),
-      'full_clouds': new CGFtexture(this, "textures/full_clouds.jpg"),
-      'just_blue': new CGFtexture(this, "textures/just_blue.jpg")
+      'just_blue': new CGFtexture(this, "textures/just_blue.jpg"),
+      'cloudy_sky': new CGFtexture(this, "textures/basic.jpg"),
+      'farm_road': new CGFtexture(this, "textures/farm_road.jpg")
     };
     
     this.skyShader = new CGFshader(this.gl, "shaders/skyglow.vert", "shaders/skyglow.frag");
