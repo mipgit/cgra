@@ -52,32 +52,99 @@ canvas {
 
 #game-hud {
     position: absolute;
-    top: 10px; left: 10px;
+    top: 20px; left: 20px;
     z-index: 100;
     pointer-events: none;
     color: #fff;
-    text-shadow: 0 1px 3px rgba(0,0,0,0.7);
-    font-size: 13px;
-    font-weight: 500;
-    line-height: 1.5;
-    letter-spacing: 0.3px;
-    background: rgba(20, 15, 30, 0.45);
-    padding: 8px 12px;
-    border-radius: 8px;
-    border: 1px solid rgba(255,255,255,0.08);
+    background: linear-gradient(135deg, rgba(30, 25, 45, 0.8), rgba(15, 10, 25, 0.55));
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    padding: 16px 22px;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3), 0 1px 1px rgba(255, 255, 255, 0.1) inset;
+    width: 200px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
 }
+
+#game-hud .hud-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+#game-hud .hud-score-row {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 8px;
+    margin-bottom: 2px;
+}
+
+#game-hud .score-title {
+    color: rgba(255, 215, 0, 0.85); /* gold */
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 1px;
+}
+
+#game-hud #hud-score {
+    font-size: 22px;
+    font-weight: 800;
+    color: #ffd700;
+    text-shadow: 0 0 10px rgba(255, 215, 0, 0.4);
+}
+
+#game-hud .hp-title {
+    color: rgba(255, 107, 107, 0.9);
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 1px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+#game-hud .hp-value {
+    font-size: 18px;
+    font-weight: 800;
+    color: #ff6b6b;
+    text-shadow: 0 0 8px rgba(255, 107, 107, 0.3);
+}
+
 #game-hud .hp-wrap {
-    width: 100px; height: 8px;
-    background: rgba(0,0,0,0.35);
-    border: 1px solid rgba(255,255,255,0.2);
-    border-radius: 4px;
-    margin-top: 4px; overflow: hidden;
+    width: 100%; height: 12px;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    overflow: hidden;
+    margin-top: 4px;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
 }
+
 #game-hud .hp-bar {
     width: 100%; height: 100%;
-    background: linear-gradient(90deg, #ff6b6b, #ffd93d, #6bcb77);
+    background: linear-gradient(90deg, #ff4b4b, #ffbe3b, #4ede8a);
     transform-origin: left center;
-    transition: transform 0.2s ease-out;
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 0 6px rgba(78, 222, 138, 0.4);
+}
+
+#game-hud .bales-row {
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding-top: 8px;
+    margin-top: 2px;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+#game-hud #hud-bales {
+    font-size: 16px;
+    font-weight: 700;
+    color: #4ecca3;
 }
 
 #idle-hint {
@@ -123,16 +190,179 @@ canvas {
     opacity: 0.8;
     text-shadow: 0 1px 3px rgba(0,0,0,0.4);
 }
+
+/* Beautiful dynamic pickup prompt styling */
+#pickup-prompt {
+    position: absolute;
+    bottom: 12%; left: 50%;
+    transform: translate(-50%, 20px) scale(0.9);
+    z-index: 110;
+    color: #fff;
+    font-size: 15px;
+    font-weight: 600;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.4);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275), transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    background: linear-gradient(135deg, rgba(255, 179, 71, 0.9), rgba(255, 94, 98, 0.9));
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    padding: 10px 22px;
+    border-radius: 30px;
+    border: 1px solid rgba(255,255,255,0.25);
+    box-shadow: 0 8px 24px rgba(255, 94, 98, 0.3), 0 4px 8px rgba(0,0,0,0.2);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+#pickup-prompt.visible {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+    animation: prompt-glow-pulse 1.5s infinite alternate ease-in-out;
+}
+
+#pickup-prompt b {
+    background: #fff;
+    color: #ff5e62;
+    padding: 3px 9px;
+    border-radius: 6px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    font-size: 15px;
+    font-weight: bold;
+    display: inline-block;
+    animation: key-bounce 0.6s infinite alternate ease-in-out;
+}
+
+@keyframes prompt-glow-pulse {
+    0% {
+        box-shadow: 0 8px 24px rgba(255, 94, 98, 0.3), 0 4px 8px rgba(0,0,0,0.2);
+    }
+    100% {
+        box-shadow: 0 8px 32px rgba(255, 94, 98, 0.55), 0 4px 12px rgba(0,0,0,0.3);
+        transform: translate(-50%, -2px) scale(1.03);
+    }
+}
+
+@keyframes key-bounce {
+    0% { transform: translateY(0); }
+    100% { transform: translateY(-3px); }
+}
+
+/* Beautiful dynamic drop prompt styling */
+#drop-prompt {
+    position: absolute;
+    bottom: 12%; left: 50%;
+    transform: translate(-50%, 20px) scale(0.9);
+    z-index: 110;
+    color: #fff;
+    font-size: 15px;
+    font-weight: 600;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.4);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275), transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    background: linear-gradient(135deg, rgba(138, 43, 226, 0.9), rgba(0, 191, 255, 0.9));
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    padding: 10px 22px;
+    border-radius: 30px;
+    border: 1px solid rgba(255,255,255,0.25);
+    box-shadow: 0 8px 24px rgba(138, 43, 226, 0.3), 0 4px 8px rgba(0,0,0,0.2);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+#drop-prompt.visible {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+    animation: prompt-drop-glow-pulse 1.5s infinite alternate ease-in-out;
+}
+
+#drop-prompt b {
+    background: #fff;
+    color: #8a2be2;
+    padding: 3px 9px;
+    border-radius: 6px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    font-size: 15px;
+    font-weight: bold;
+    display: inline-block;
+    animation: key-bounce 0.6s infinite alternate ease-in-out;
+}
+
+@keyframes prompt-drop-glow-pulse {
+    0% {
+        box-shadow: 0 8px 24px rgba(138, 43, 226, 0.3), 0 4px 8px rgba(0,0,0,0.2);
+    }
+    100% {
+        box-shadow: 0 8px 32px rgba(138, 43, 226, 0.55), 0 4px 12px rgba(0,0,0,0.3);
+        transform: translate(-50%, -2px) scale(1.03);
+    }
+}
+
+/* Beautiful dynamic barn bales badge */
+#barn-bales-badge {
+    position: absolute;
+    transform: translate(-50%, -100%);
+    z-index: 90;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    background: linear-gradient(135deg, rgba(78, 204, 163, 0.9), rgba(53, 162, 159, 0.9));
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    padding: 8px 16px;
+    border-radius: 20px;
+    border: 1px solid rgba(255,255,255,0.25);
+    box-shadow: 0 6px 20px rgba(53, 162, 159, 0.4), 0 4px 8px rgba(0,0,0,0.15);
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+    white-space: nowrap;
+    display: none;
+}
+
+#barn-bales-badge b {
+    background: #fff;
+    color: #35a29f;
+    padding: 2px 7px;
+    border-radius: 6px;
+    margin-left: 6px;
+    font-size: 14px;
+    font-weight: bold;
+    display: inline-block;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+}
 </style>
 </head>
 <body>
 
 <!-- Game HUD -->
 <div id="game-hud">
-    <div>Score: <span id="hud-score">0</span></div>
-    <div>HP <span id="hud-hp-text">100</span>/100</div>
-    <div class="hp-wrap"><div class="hp-bar" id="hud-hp-bar"></div></div>
-    <div>Bales: <span id="hud-bales">0</span></div>
+    <div class="hud-row hud-score-row">
+        <span class="score-title">Score</span>
+        <span id="hud-score">0</span>
+    </div>
+    
+    <div>
+        <div class="hud-row">
+            <span class="hp-title">❤️ HP</span>
+            <span class="hp-value"><span id="hud-hp-text">100</span><span style="font-size:12px;opacity:0.6;font-weight:500;">/100</span></span>
+        </div>
+        <div class="hp-wrap">
+            <div class="hp-bar" id="hud-hp-bar"></div>
+        </div>
+    </div>
+    
+    <div class="hud-row bales-row">
+        <span>Bales Stored</span>
+        <span id="hud-bales">0</span>
+    </div>
 </div>
 
 <!-- Idle hint -->
@@ -145,6 +375,21 @@ canvas {
 <div id="gameover-overlay">
     <h1>Game Over</h1>
     <p>Press <b>R</b> to restart</p>
+</div>
+
+<!-- Pickup Prompt -->
+<div id="pickup-prompt">
+    Press <b>P</b> to pick!
+</div>
+
+<!-- Drop Prompt -->
+<div id="drop-prompt">
+    Press <b>L</b> to drop!
+</div>
+
+<!-- Barn Bales Badge -->
+<div id="barn-bales-badge">
+    Bales: <b>0</b>
 </div>
 
 <script type="module" src="main.js"></script>

@@ -185,6 +185,7 @@ export class MyGameController {
         const onPath = this.scene.onPath ?? (() => false);
         const [deliveryX, , deliveryZ] = this._barnDeliveryCenter();
         const placed = [{ x: 0, z: 0, r: 3 }];
+        placed.push({ x: -40, z: -40, r: 8.0 }); // wagon starting position safety zone
         placed.push({ x: this.barn.position[0], z: this.barn.position[2], r: this.barn.activationRadius + 1 });
         placed.push({ x: deliveryX, z: deliveryZ, r: this.barn.activationRadius + 1 });
 
@@ -324,6 +325,8 @@ export class MyGameController {
         const baleEl  = document.getElementById('hud-bales');
         const idle    = document.getElementById('idle-hint');
         const over    = document.getElementById('gameover-overlay');
+        const prompt  = document.getElementById('pickup-prompt');
+        const dropPrompt = document.getElementById('drop-prompt');
 
         if (scoreEl) scoreEl.textContent = this.score;
         if (hpText)  hpText.textContent  = Math.ceil(this.wagonController.hp);
@@ -336,6 +339,104 @@ export class MyGameController {
         if (over) {
             over.classList.toggle('visible', this.state === 'gameover');
         }
+
+        const w = this.wagonController;
+
+        let canDrop = false;
+        if (this.state === 'running' && w.bales.length > 0) {
+            const [cx, , cz] = this._barnDeliveryCenter();
+            const dx = w.position[0] - cx;
+            const dz = w.position[2] - cz;
+            if ((dx * dx + dz * dz) < (this.barn.activationRadius * this.barn.activationRadius)) {
+                canDrop = true;
+            }
+        }
+
+        if (dropPrompt) {
+            dropPrompt.classList.toggle('visible', canDrop);
+        }
+
+        if (prompt) {
+            let canPickup = false;
+            // Only allow pickup prompt if not displaying the drop prompt
+            if (this.state === 'running' && w.bales.length < 2 && !canDrop) {
+                for (const b of this.bales) {
+                    if (b.state !== 'free') continue;
+                    const dx = b.position[0] - w.position[0];
+                    const dz = b.position[2] - w.position[2];
+                    const d2 = dx * dx + dz * dz;
+                    const range = (b.radius + w.bodySize.z * 0.5 + 0.2);
+                    if (d2 < range * range) {
+                        canPickup = true;
+                        break;
+                    }
+                }
+            }
+            prompt.classList.toggle('visible', canPickup);
+        }
+    }
+
+    _updateBarnBalesBadge() {
+        const badge = document.getElementById('barn-bales-badge');
+        if (!badge) return;
+
+        if (this.state === 'idle' || this.state === 'gameover' || !this.barn) {
+            badge.style.display = 'none';
+            return;
+        }
+
+        const count = this.bales.filter(b => b.state === 'stored').length;
+        badge.innerHTML = `Bales: <b>${count}</b>`;
+
+        // Float above the barn's roof (Y ~ 13.0 above barn position)
+        const barnPos = [this.barn.position[0], this.barn.position[1] + 13.0, this.barn.position[2]];
+        
+        const scene = this.scene;
+        // fallback to cover different CGF versions / structures
+        const proj = scene.pMatrix || scene.projectionMatrix;
+        const view = scene.activeMatrix || scene.viewMatrix;
+
+        if (!proj || !view) {
+            badge.style.display = 'none';
+            return;
+        }
+
+        // Multiply matrices manually: MVP = proj * view
+        const mvp = new Float32Array(16);
+        for (let i = 0; i < 4; i++) {
+            for (let j = 0; j < 4; j++) {
+                let sum = 0;
+                for (let k = 0; k < 4; k++) {
+                    sum += proj[i + k * 4] * view[k + j * 4];
+                }
+                mvp[i + j * 4] = sum;
+            }
+        }
+
+        // Transform 3D coordinates [x, y, z, 1.0] by MVP matrix
+        const x = barnPos[0], y = barnPos[1], z = barnPos[2], w_in = 1.0;
+        const clipX = mvp[0] * x + mvp[4] * y + mvp[8] * z + mvp[12] * w_in;
+        const clipY = mvp[1] * x + mvp[5] * y + mvp[9] * z + mvp[13] * w_in;
+        const clipZ = mvp[2] * x + mvp[6] * y + mvp[10] * z + mvp[14] * w_in;
+        const clipW = mvp[3] * x + mvp[7] * y + mvp[11] * z + mvp[15] * w_in;
+
+        if (clipW > 0.0001) {
+            const ndcX = clipX / clipW;
+            const ndcY = clipY / clipW;
+            const ndcZ = clipZ / clipW;
+
+            // Only draw if within standard WebGL clip boundaries (facing the camera)
+            if (ndcZ >= -1 && ndcZ <= 1) {
+                const screenX = (ndcX * 0.5 + 0.5) * window.innerWidth;
+                const screenY = (1.0 - (ndcY * 0.5 + 0.5)) * window.innerHeight;
+                
+                badge.style.display = 'block';
+                badge.style.left = `${screenX}px`;
+                badge.style.top = `${screenY}px`;
+                return;
+            }
+        }
+        badge.style.display = 'none';
     }
 
     _handleCollisions() {
@@ -695,5 +796,8 @@ export class MyGameController {
         }
         s.setActiveShader(s.defaultShader);
         s.gl.enable(s.gl.CULL_FACE);
+
+        // Update projected barn bales badge during the active rendering frame
+        this._updateBarnBalesBadge();
     }
 }
