@@ -26,23 +26,34 @@ canvas {
     z-index: 50;
 }
 .dg.main {
-    border-radius: 6px !important;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.15) !important;
+    border-radius: 8px !important;
+    overflow: hidden !important;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5) !important;
 }
 .dg.main .close-button {
-    background: #c8c0d0 !important;
-    border-radius: 0 0 6px 6px !important;
+    background: #2a2a3a !important;
+    color: #aaa !important;
+    border-top: 1px solid #3a3a4a !important;
 }
 .dg li:not(.folder) {
-    background: #f4f0f8 !important;
-    border-bottom: 1px solid #e8e0f0 !important;
+    background: #1e1e2e !important;
+    border-bottom: 1px solid #2a2a3a !important;
+    color: #e0e0e0 !important;
 }
 .dg li.title {
-    background: #d8d0e0 !important;
+    background: #2a2a3a !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.03em !important;
 }
 .dg .c input[type="text"] {
-    background: #fff !important;
+    background: #2a2a3a !important;
+    color: #e0e0e0 !important;
     border-radius: 3px !important;
+    border: 1px solid #3a3a4a !important;
+}
+.dg .property-name {
+    color: #c0c0d0 !important;
 }
 .dg .cr.boolean,
 .dg .cr.number,
