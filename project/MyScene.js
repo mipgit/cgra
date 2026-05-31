@@ -128,7 +128,7 @@ export class MyScene extends CGFscene {
     this.rockFields = [];
     this.treeFields = [];
 
-    this.displayAxis = true;
+    this.displayAxis = false;
 
     this.controller = new MyGameController(this, {
       heightScale: 7.0, terrainHalfExtent: 100.0, heightmapUrl: 'textures/heightmap.png',
