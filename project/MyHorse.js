@@ -162,6 +162,13 @@ export class MyHorse extends CGFobject {
 
         const s = this.scene;
         s.setActiveShader(this.coatShader);
+        
+        const speed = controller ? Math.abs(controller.speed) : 0;
+        this.coatShader.setUniformsValues({
+            uWalkPhase: this._walkPhase,
+            uSpeed: speed,
+        });
+
         const gl = s.gl;
         gl.disable(gl.CULL_FACE);
         mesh.display();
