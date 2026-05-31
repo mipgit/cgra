@@ -32,31 +32,31 @@ export class MyHalfCylinder extends CGFobject {
 
                 // radius is 1. x goes from -1 to 1. y goes from 0 to -1 to 0.
                 this.vertices.push(ca, sa, z);
-                
+
                 this.normals.push(-ca, -sa, 0);
 
                 // TexCoords
                 var u = i / this.slices;
                 var v = j / this.stacks;
                 this.texCoords.push(u, v);
-            }
-        }
+                }
+                }
 
-        // Indices
-        for (var j = 0; j < this.stacks; j++) {
-            for (var i = 0; i < this.slices; i++) {
+                // Indices
+                for (var j = 0; j < this.stacks; j++) {
+                for (var i = 0; i < this.slices; i++) {
                 var bl = j * (this.slices + 1) + i;
                 var br = j * (this.slices + 1) + (i + 1);
                 var tl = (j + 1) * (this.slices + 1) + i;
                 var tr = (j + 1) * (this.slices + 1) + (i + 1);
 
-                this.indices.push(tl, br, bl);
-                this.indices.push(tl, tr, br);
+                this.indices.push(bl, tr, br);
+                this.indices.push(bl, tl, tr);
 
-                this.indices.push(bl, br, tl);
-                this.indices.push(br, tr, tl);
-            }
-        }
+                this.indices.push(br, tr, bl);
+                this.indices.push(tr, tl, bl);
+                }
+                }
 
         this.primitiveType = this.scene.gl.TRIANGLES;
         this.initGLBuffers();

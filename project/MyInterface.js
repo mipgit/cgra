@@ -25,17 +25,15 @@ export class MyInterface extends CGFinterface {
         this.gui.add(this.scene, 'displayAxis').name('axis');
 
         // Camera selection
-        this.gui.add(this.scene, 'selectedCamera', ['Wagon', 'Birds Eye'])
+        this.gui.add(this.scene, 'selectedCamera', ['Wagon', 'Orbit', 'Birds Eye'])
               .name('Camera Mode')
-              .onChange((val) => this.scene.updateCameraMode(val));
+              .onChange((val) => {
+                  this.scene.updateCameraMode(val);
+                  if (document.activeElement) document.activeElement.blur();
+              });
 
 
         
-        // Dropdown for sky texture selection
-        this.gui.add(this.scene, 'selectedTexture', ['just_blue', 'cloudy_sky', 'farm_road'])
-              .name('sky')
-              .onChange(() => this.scene.updateTexture());
-
         // Enhanced Clouds controls
         const cloudsFolder = this.gui.addFolder('Enhanced Clouds');
         cloudsFolder.add(this.scene, 'cloudSpeed', 0.0, 4.0, 0.1).name('Wind Speed');

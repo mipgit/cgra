@@ -149,19 +149,30 @@ export class MyGameController {
         if (!this.scene.camera) return;
 
         const cam = this.scene.camera;
-        const pos = cam.position;
+        let pos = [...cam.position];
         const target = cam.target;
+
+        // 1. Ground constraint
+        const groundY = this._sampleGroundY(pos[0], pos[2]);
+        const minHeightAboveGround = 1.0; 
+        if (pos[1] < groundY + minHeightAboveGround) {
+            pos[1] = groundY + minHeightAboveGround;
+        }
+
+        // 2. Sphere constraint
         const posDist = Math.hypot(pos[0], pos[1], pos[2]);
         const targetDist = Math.hypot(target[0], target[1], target[2]);
         const dist = Math.max(posDist, targetDist);
 
-        if (dist <= this.cameraBoundsRadius || dist < 1e-6) {
-            return;
+        if (dist > this.cameraBoundsRadius && dist > 1e-6) {
+            const scale = this.cameraBoundsRadius / dist;
+            pos[0] *= scale;
+            pos[1] *= scale;
+            pos[2] *= scale;
+            cam.setTarget(vec3.fromValues(target[0] * scale, target[1] * scale, target[2] * scale));
         }
 
-        const scale = this.cameraBoundsRadius / dist;
-        cam.setPosition(vec3.fromValues(pos[0] * scale, pos[1] * scale, pos[2] * scale));
-        cam.setTarget(vec3.fromValues(target[0] * scale, target[1] * scale, target[2] * scale));
+        cam.setPosition(vec3.fromValues(pos[0], pos[1], pos[2]));
     }
     _reseatToGround() {
         for (const r of this.rocks) r.position[1] = this._sampleGroundY(r.position[0], r.position[2]);
@@ -259,38 +270,48 @@ export class MyGameController {
     }
 
     _updateCamera() {
-        if (this.scene.selectedCamera !== 'Wagon') return;
         if (!this.scene.camera) return;
 
         const wp = this.wagonController.position;
         const cam = this.scene.camera;
 
+        if (this.scene.selectedCamera === 'Orbit') {
+            const tx = wp[0];
+            const ty = wp[1] + 3;
+            const tz = wp[2];
 
-        // Camera 2: Improved follow camera that always follows and rotates with the wagon
-        const heading = this.wagonController.heading;
-        const followDist = 25;
-        const followHeight = 5.5;
+            const dx = cam.position[0] - cam.target[0];
+            const dy = cam.position[1] - cam.target[1];
+            const dz = cam.position[2] - cam.target[2];
 
+            cam.setTarget(vec3.fromValues(tx, ty, tz));
+            cam.setPosition(vec3.fromValues(tx + dx, ty + dy, tz + dz));
+        } else if (this.scene.selectedCamera === 'Wagon') {
+            // Camera 2: Improved follow camera that always follows and rotates with the wagon
+            const heading = this.wagonController.heading;
+            const followDist = 25;
+            const followHeight = 5.5;
 
-        // Vector pointing behind the wagon
-        const bx = -Math.cos(heading);
-        const bz = Math.sin(heading);
+            // Vector pointing behind the wagon
+            const bx = -Math.cos(heading);
+            const bz = Math.sin(heading);
 
-        const cx = wp[0] + bx * followDist;
-        const cy = wp[1] + followHeight;
-        const cz = wp[2] + bz * followDist;
+            const cx = wp[0] + bx * followDist;
+            const cy = wp[1] + followHeight;
+            const cz = wp[2] + bz * followDist;
 
-        cam.setPosition(vec3.fromValues(cx, cy, cz));
+            cam.setPosition(vec3.fromValues(cx, cy, cz));
 
-        // Vector pointing slightly in front of the wagon for the target
-        const forwardX = Math.cos(heading);
-        const forwardZ = -Math.sin(heading);
-        const lookAheadDist = 2;
+            // Vector pointing slightly in front of the wagon for the target
+            const forwardX = Math.cos(heading);
+            const forwardZ = -Math.sin(heading);
+            const lookAheadDist = 2;
 
-        const tx = wp[0] + forwardX * lookAheadDist;
-        const ty = wp[1] + 3; // slightly above ground level
-        const tz = wp[2] + forwardZ * lookAheadDist;
-        cam.setTarget(vec3.fromValues(tx, ty, tz));
+            const tx = wp[0] + forwardX * lookAheadDist;
+            const ty = wp[1] + 3; // slightly above ground level
+            const tz = wp[2] + forwardZ * lookAheadDist;
+            cam.setTarget(vec3.fromValues(tx, ty, tz));
+        }
 
         this._constrainCameraToBounds();
     }

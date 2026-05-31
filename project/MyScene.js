@@ -35,12 +35,8 @@ export class MyScene extends CGFscene {
     this.sphere = new MySphere(this, 50, 50);
     this.terrain = new MyPlane(this, 100);
     
-    // Load all sky textures
-    this.textures = {
-      'just_blue': new CGFtexture(this, "textures/just_blue.jpg"),
-      'cloudy_sky': new CGFtexture(this, "textures/basic.jpg"),
-      'farm_road': new CGFtexture(this, "textures/farm_road.jpg")
-    };
+    // Load sky texture
+    this.skyTexture = new CGFtexture(this, "textures/just_blue.jpg");
     
     this.skyShader = new CGFshader(this.gl, "shaders/skyglow.vert", "shaders/skyglow.frag");
 
@@ -50,8 +46,7 @@ export class MyScene extends CGFscene {
     this.skyAppearance.setSpecular(0, 0, 0, 1);
     this.skyAppearance.setEmission(0, 0, 0, 1);
     this.skyAppearance.setShininess(120);
-    this.selectedTexture = 'just_blue';
-    this.skyAppearance.setTexture(this.textures[this.selectedTexture]);
+    this.skyAppearance.setTexture(this.skyTexture);
     this.skyAppearance.setTextureWrap('REPEAT', 'REPEAT');
 
     this.sunAppearance = new CGFappearance(this);
@@ -168,21 +163,21 @@ export class MyScene extends CGFscene {
   }
 
   initLights() {
-    this.lights[0].setPosition(0, 0, 0, 1);
-    this.lights[0].setAmbient(1.0, 1.0, 1.0, 1.0);  
-    this.lights[0].setDiffuse(2.0, 2.0, 2.0, 1.0);  
-    this.lights[0].setSpecular(1.5, 1.5, 1.425, 1.0);
-    this.lights[0].setSpecular(1.0, 1.0, 0.95, 1.0);
-    this.lights[0].setConstantAttenuation(1.0);
-    this.lights[0].setLinearAttenuation(0.0);
-    this.lights[0].setQuadraticAttenuation(0.0);
+    this.lights[0].setPosition(0, 1, 0, 0); // Directional light coming from above
+    this.lights[0].setAmbient(0.3, 0.3, 0.3, 1.0);  
+    this.lights[0].setDiffuse(1.0, 1.0, 1.0, 1.0);  
+    this.lights[0].setSpecular(1.0, 1.0, 1.0, 1.0);
     this.lights[0].enable();
     this.lights[0].update();
+    
+    // Global ambient light for a "whole sky" feel
+    this.setGlobalAmbientLight(0.2, 0.2, 0.2, 1.0);
   }
 
   initCameras() {
     this.cameras = {
       'Wagon': new CGFcamera(0.4, 0.1, 500, vec3.fromValues(0, 5.5, 25), vec3.fromValues(0, 0, 0)),
+      'Orbit': new CGFcamera(0.4, 0.1, 500, vec3.fromValues(-40, 15, -20), vec3.fromValues(-40, 3, -40)),
       'Birds Eye': new CGFcamera(0.4, 0.1, 500, vec3.fromValues(-84.2, 12.0, -42.8), vec3.fromValues(-40.0, 3.0, -40.0))
     };
     this.selectedCamera = 'Wagon';
@@ -198,14 +193,10 @@ export class MyScene extends CGFscene {
 
 
   setDefaultAppearance() {
-    this.setAmbient(0.2, 0.4, 0.8, 1.0);
-    this.setDiffuse(0.2, 0.4, 0.8, 1.0);
-    this.setSpecular(0.2, 0.4, 0.8, 1.0);
+    this.setAmbient(0.2, 0.2, 0.2, 1.0);
+    this.setDiffuse(0.6, 0.6, 0.6, 1.0);
+    this.setSpecular(0.2, 0.2, 0.2, 1.0);
     this.setShininess(10.0);
-  }
-
-  updateTexture() {
-    this.skyAppearance.setTexture(this.textures[this.selectedTexture]);
   }
 
   _ensureHeightmap() {
@@ -479,14 +470,14 @@ export class MyScene extends CGFscene {
     for (let p = 0; p < 14; p++) {
         const pcx = (Math.random() - 0.5) * 2 * DETAIL_EDGE;
         const pcz = (Math.random() - 0.5) * 2 * DETAIL_EDGE;
-        if (onPath(pcx, pcz) || tooFar(pcx, pcz)) continue;
+        if (tooFar(pcx, pcz)) continue;
         const count = 3 + Math.floor(Math.random() * 5);
         for (let j = 0; j < count; j++) {
             const angle = Math.random() * Math.PI * 2;
             const r = Math.sqrt(Math.random()) * 4.0;
             const x = pcx + Math.cos(angle) * r;
             const z = pcz + Math.sin(angle) * r;
-            if (onPath(x, z) || tooFar(x, z) || isNearWagon(x, z)) continue;
+            if (tooFar(x, z) || isNearWagon(x, z)) continue;
             this.rockInstances.push({
                 x, z, rotY: Math.random() * Math.PI * 2, scale: 1.0 + Math.random() * 2.0,
             });
@@ -546,7 +537,7 @@ export class MyScene extends CGFscene {
     let sunDir = vec3.fromValues(sunX, sunY, sunZ);
     vec3.normalize(sunDir, sunDir);
 
-    this.lights[0].setPosition(sunX, sunY, sunZ, 1);
+    this.lights[0].setPosition(sunX, sunY, sunZ, 0);
     this.lights[0].update();
 
     if (this.displayAxis) this.axis.display();

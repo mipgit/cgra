@@ -14,7 +14,7 @@ export class MyHayBale extends CGFobject {
         this.heading  = Math.random() * Math.PI * 2; // visual variety
         this.initialHeading = this.heading;
         this.pitch    = 0;
-        this.size     = { x: 0.7, y: 0.55, z: 0.9 };
+        this.size     = { x: 0.7, y: 0.7, z: 0.9 };
         this.radius   = 0.6;            // pickup proximity
         this.state    = 'free';
 
@@ -57,11 +57,19 @@ export class MyHayBale extends CGFobject {
     followWagon(wagonController, slot) {
         const forwardX = Math.cos(wagonController.heading);
         const forwardZ = -Math.sin(wagonController.heading);
+
+        // Right vector (perpendicular to forward)
+        const rightX = Math.sin(wagonController.heading);
+        const rightZ = Math.cos(wagonController.heading);
         
         // Offset along the wagon's length (X axis in local space)
-        // Slot 0 is in the back, Slot 1 is closer to the middle
-        const localXOffset = slot === 0 ? -1.2 : -0.2; 
+    
+        const localXOffset = 0.8; 
         
+        // Offset along the wagon's width (Z axis in local space)
+        // Slot 0 is on the left, Slot 1 is on the right
+        const localZOffset = slot === 0 ? 0.5 : -0.5;
+
         // Local Y offset is 1.6 (top of the bed base)
         const localYOffset = 1.6;
 
@@ -70,11 +78,12 @@ export class MyHayBale extends CGFobject {
         const rotatedX = localXOffset * Math.cos(pitch) - localYOffset * Math.sin(pitch);
         const rotatedY = localXOffset * Math.sin(pitch) + localYOffset * Math.cos(pitch);
 
-        this.position[0] = wagonController.position[0] + forwardX * rotatedX;
+        this.position[0] = wagonController.position[0] + forwardX * rotatedX + rightX * localZOffset;
         this.position[1] = wagonController.position[1] + rotatedY;
-        this.position[2] = wagonController.position[2] + forwardZ * rotatedX;
+        this.position[2] = wagonController.position[2] + forwardZ * rotatedX + rightZ * localZOffset;
         
-        this.heading = wagonController.heading;
+        // Rotate 90 degrees relative to wagon heading
+        this.heading = wagonController.heading + Math.PI / 2;
         this.pitch = pitch;
     }
 

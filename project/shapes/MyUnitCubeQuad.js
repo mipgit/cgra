@@ -13,42 +13,45 @@ export class MyUnitCubeQuad extends CGFobject {
     }
 
     display(){
-
+        // Front (+Z)
         this.scene.pushMatrix();
-        this.scene.translate(0,0, 0.5);
+        this.scene.translate(0, 0, 0.5);
         this.quad1.display();
         this.scene.popMatrix();
 
+        // Left (-X) -> rotates by -90 deg around Y
         this.scene.pushMatrix();
-        this.scene.translate(-0.5,0,0);
-        this.scene.rotate(90 * Math.PI / 180, 0, 1, 0);
+        this.scene.translate(-0.5, 0, 0);
+        this.scene.rotate(-Math.PI / 2, 0, 1, 0);
         this.quad2.display();
         this.scene.popMatrix();
 
+        // Right (+X) -> rotates by +90 deg around Y
         this.scene.pushMatrix();
-        this.scene.translate(0.5,0,0);
-        this.scene.rotate(-90 * Math.PI / 180, 0, 1, 0);
+        this.scene.translate(0.5, 0, 0);
+        this.scene.rotate(Math.PI / 2, 0, 1, 0);
         this.quad3.display();
         this.scene.popMatrix();
 
+        // Back (-Z) -> rotates by 180 deg around Y
         this.scene.pushMatrix();
-        this.scene.translate(0,0, -0.5);
+        this.scene.translate(0, 0, -0.5);
+        this.scene.rotate(Math.PI, 0, 1, 0);
         this.quad4.display();
         this.scene.popMatrix();
 
+        // Top (+Y) -> rotates by -90 deg around X
         this.scene.pushMatrix();
-        this.scene.translate(0,0.5,0);
-        this.scene.rotate(90 * Math.PI / 180, 1, 0, 0);
+        this.scene.translate(0, 0.5, 0);
+        this.scene.rotate(-Math.PI / 2, 1, 0, 0);
         this.quad5.display();
         this.scene.popMatrix();
 
+        // Bottom (-Y) -> rotates by +90 deg around X
         this.scene.pushMatrix();
-        this.scene.translate(0,-0.5,0);
-        this.scene.rotate(90 * Math.PI / 180, 1, 0, 0);
+        this.scene.translate(0, -0.5, 0);
+        this.scene.rotate(Math.PI / 2, 1, 0, 0);
         this.quad6.display();
         this.scene.popMatrix();
-
     }
-
-    
 }
