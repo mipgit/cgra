@@ -149,19 +149,30 @@ export class MyGameController {
         if (!this.scene.camera) return;
 
         const cam = this.scene.camera;
-        const pos = cam.position;
+        let pos = [...cam.position];
         const target = cam.target;
+
+        // 1. Ground constraint
+        const groundY = this._sampleGroundY(pos[0], pos[2]);
+        const minHeightAboveGround = 1.0; 
+        if (pos[1] < groundY + minHeightAboveGround) {
+            pos[1] = groundY + minHeightAboveGround;
+        }
+
+        // 2. Sphere constraint
         const posDist = Math.hypot(pos[0], pos[1], pos[2]);
         const targetDist = Math.hypot(target[0], target[1], target[2]);
         const dist = Math.max(posDist, targetDist);
 
-        if (dist <= this.cameraBoundsRadius || dist < 1e-6) {
-            return;
+        if (dist > this.cameraBoundsRadius && dist > 1e-6) {
+            const scale = this.cameraBoundsRadius / dist;
+            pos[0] *= scale;
+            pos[1] *= scale;
+            pos[2] *= scale;
+            cam.setTarget(vec3.fromValues(target[0] * scale, target[1] * scale, target[2] * scale));
         }
 
-        const scale = this.cameraBoundsRadius / dist;
-        cam.setPosition(vec3.fromValues(pos[0] * scale, pos[1] * scale, pos[2] * scale));
-        cam.setTarget(vec3.fromValues(target[0] * scale, target[1] * scale, target[2] * scale));
+        cam.setPosition(vec3.fromValues(pos[0], pos[1], pos[2]));
     }
     _reseatToGround() {
         for (const r of this.rocks) r.position[1] = this._sampleGroundY(r.position[0], r.position[2]);
