@@ -105,7 +105,7 @@ Below is a clear checklist of all implemented features, organized by the **10 su
 ### 6. Wagon Interaction Mechanics & Physics
 *   **Mandatory**:
     *   [x] **Steering System**: Interactive front-wheel steering where the wheel rotation matches the steering angle.
-    *   [x] **Pickup System**: Ability to detect, pick up, and carry up to two hay bales. Bales are placed side-by-side in the back of the wagon bed (the open half) with synchronized orientations.
+    *   [x] **Pickup System**: Ability to detect, pick up, and carry up to two hay bales. Bales are placed side-by-side in the front of the wagon bed with synchronized orientations.
 *   **Advanced**:
     *   [x] **Movement Physics**: Realistic wagon handling featuring acceleration, deceleration, and braking with simulated inertia (advanced kinematics physics model):
         $$v_{t+1} = v_t + (a_{\text{engine}} - C_f \cdot v_t - C_b \cdot \text{brake}) \cdot dt$$
