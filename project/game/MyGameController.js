@@ -185,6 +185,7 @@ export class MyGameController {
         const onPath = this.scene.onPath ?? (() => false);
         const [deliveryX, , deliveryZ] = this._barnDeliveryCenter();
         const placed = [{ x: 0, z: 0, r: 3 }];
+        placed.push({ x: -40, z: -40, r: 8.0 }); // wagon starting position safety zone
         placed.push({ x: this.barn.position[0], z: this.barn.position[2], r: this.barn.activationRadius + 1 });
         placed.push({ x: deliveryX, z: deliveryZ, r: this.barn.activationRadius + 1 });
 

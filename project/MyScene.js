@@ -271,7 +271,7 @@ export class MyScene extends CGFscene {
     const isNearWagon = (x, z) => {
       const dx = x - (-40);
       const dz = z - (-40);
-      return (dx * dx + dz * dz) < 9.0; // 3 units radius squared
+      return (dx * dx + dz * dz) < 64.0; // 8 units radius squared
     };
 
     const makeFlower = (pcx, pcz, spread, species) => {
