@@ -42,18 +42,7 @@ export class MyInterface extends CGFinterface {
         cloudsFolder.add(this.scene, 'shaderCloudDensity', 0.2, 0.7, 0.02).name('Cutoff');
         cloudsFolder.open();
 
-        // Debug: hide the wagon and show a single horse OBJ at origin so we
-        // can inspect each spliced file in isolation.
-        const horseFolder = this.gui.addFolder('horse test');
-        horseFolder.add(this.scene, 'horseTestMode').name('test mode');
-        horseFolder.add(this.scene, 'horseTestSlot', {
-            'neutral':              0,
-            'spliced_a':            1,
-            'spliced_b (RF lift)':  2,
-            'spliced_c (LH lift)':  3,
-            'spliced_d (LF lift)':  4,
-        }).name('which obj');
-        horseFolder.open();
+
 
         return true;
     }

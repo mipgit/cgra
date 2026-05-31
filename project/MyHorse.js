@@ -21,7 +21,7 @@ export class MyHorse extends CGFobject {
     constructor(scene, opts = {}) {
         super(scene);
 
-        this.targetHeight = opts.targetHeight ?? 3.0;
+        this.targetHeight = opts.targetHeight ?? 3.5;
         this.flipHeadTail = opts.flipHeadTail ?? false;
 
         // Five unique meshes loaded once; frameSequence picks the playback

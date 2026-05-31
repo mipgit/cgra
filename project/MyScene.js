@@ -6,7 +6,6 @@ import { MyFlowerField } from "./field/MyFlowerField.js";
 import { MyRockField } from "./static_elements/MyRockField.js";
 import { MyTreeField } from "./static_elements/MyTreeField.js";
 import { MyGameController } from "./game/MyGameController.js";
-import { MyHorse } from "./MyHorse.js";
 
 /**
  * MyScene
@@ -135,9 +134,7 @@ export class MyScene extends CGFscene {
     this._pathReady = false;
     this._worldGenerated = false;
 
-    this.horseTestMode = false;
-    this.horseTestSlot = 0;
-    this._testHorse = new MyHorse(this);
+
   }
 
   update(t) {
@@ -616,21 +613,7 @@ export class MyScene extends CGFscene {
     this.setActiveShader(this.defaultShader);
     this.gl.enable(this.gl.CULL_FACE);
 
-    // Test horse mode — show one isolated horse so we can pick which OBJ
-    // is being rendered via the GUI dropdown; skip the rest of the controller.
-    if (this.horseTestMode && this._testHorse) {
-      this.setActiveShader(this.defaultShader);
-      // Sample ground at origin so the test horse sits on the terrain.
-      let groundY = 0;
-      if (this.controller && this.controller._sampleGroundY) {
-        groundY = this.controller._sampleGroundY(0, 0);
-      }
-      this._testHorse.overrideSlot = this.horseTestSlot;
-      this.pushMatrix();
-      this.translate(0, groundY, 0);
-      this._testHorse.displayModel(null);
-      this.popMatrix();
-    } else if (this.controller) {
+    if (this.controller) {
       this.setActiveShader(this.defaultShader);
       this.controller.display();
     }
