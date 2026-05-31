@@ -12,6 +12,10 @@ export class MyInterface extends CGFinterface {
     init(application) {
         // call CGFinterface init
         super.init(application);
+
+        // Store interface reference in the scene for camera changes
+        this.scene.interface = this;
+
         
         // init GUI. For more information on the methods, check:
         // https://github.com/dataarts/dat.gui/blob/master/API.md
@@ -19,6 +23,13 @@ export class MyInterface extends CGFinterface {
 
         //Checkbox element in GUI
         this.gui.add(this.scene, 'displayAxis').name('axis');
+
+        // Camera selection
+        this.gui.add(this.scene, 'selectedCamera', ['Wagon', 'Birds Eye'])
+              .name('Camera Mode')
+              .onChange((val) => this.scene.updateCameraMode(val));
+
+
         
         // Dropdown for sky texture selection
         this.gui.add(this.scene, 'selectedTexture', ['basic', 'farm_road', 'full_clouds', 'just_blue'])

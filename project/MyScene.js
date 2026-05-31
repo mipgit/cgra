@@ -71,6 +71,10 @@ export class MyScene extends CGFscene {
     this.shaderCloudDensity = 0.42;
     this.cloudTime = 0.0;
 
+    // Camera settings
+    this.selectedCamera = 'Wagon'; // 'Wagon' or 'Bird's Eye'
+
+
 
     this.terrainShader = new CGFshader(this.gl, "shaders/terrain.vert", "shaders/terrain.frag");
     this.heightmapTexture = new CGFtexture(this, "textures/heightmap.png");
@@ -178,8 +182,21 @@ export class MyScene extends CGFscene {
   }
 
   initCameras() {
-    this.camera = new CGFcamera(0.4, 0.1, 500, vec3.fromValues(0, 0.5, 10), vec3.fromValues(0, 0.5, 0));
+    this.cameras = {
+      'Wagon': new CGFcamera(0.4, 0.1, 500, vec3.fromValues(0, 5.5, 25), vec3.fromValues(0, 0, 0)),
+      'Birds Eye': new CGFcamera(0.4, 0.1, 500, vec3.fromValues(-84.2, 12.0, -42.8), vec3.fromValues(-40.0, 3.0, -40.0))
+    };
+    this.selectedCamera = 'Wagon';
+    this.camera = this.cameras[this.selectedCamera];
   }
+
+  updateCameraMode(mode) {
+    this.camera = this.cameras[mode];
+    if (this.interface && typeof this.interface.setActiveCamera === 'function') {
+        this.interface.setActiveCamera(this.camera);
+    }
+  }
+
 
   setDefaultAppearance() {
     this.setAmbient(0.2, 0.4, 0.8, 1.0);

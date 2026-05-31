@@ -260,55 +260,38 @@ export class MyGameController {
     }
 
     _updateCamera() {
+        if (this.scene.selectedCamera !== 'Wagon') return;
         if (!this.scene.camera) return;
-        
+
         const wp = this.wagonController.position;
         const cam = this.scene.camera;
 
-        if (!this.lastWagonPos) {
-            // First time setup: place camera behind the wagon
-            this.lastWagonPos = [...wp];
-            const heading = this.wagonController.heading;
-            const followDist = 25;
-            const followHeight = 11;
-            
-            const bx = -Math.cos(heading);
-            const bz = Math.sin(heading);
-            
-            const cx = wp[0] + bx * followDist;
-            const cy = wp[1] + followHeight;
-            const cz = wp[2] + bz * followDist;
-            
-            cam.setPosition(vec3.fromValues(cx, cy, cz));
-            
-            const forwardX = Math.cos(heading);
-            const forwardZ = -Math.sin(heading);
-            const lookAheadDist = 1;
 
-            const tx = wp[0] + forwardX * lookAheadDist;
-            const ty = wp[1] + 4; 
-            const tz = wp[2] + forwardZ * lookAheadDist;
-            cam.setTarget(vec3.fromValues(tx, ty, tz));
-            this._constrainCameraToBounds();
-            return;
-        }
+        // Camera 2: Improved follow camera that always follows and rotates with the wagon
+        const heading = this.wagonController.heading;
+        const followDist = 25;
+        const followHeight = 5.5;
 
-        // Calculate how much the wagon moved since last frame
-        const dx = wp[0] - this.lastWagonPos[0];
-        const dy = wp[1] - this.lastWagonPos[1];
-        const dz = wp[2] - this.lastWagonPos[2];
 
-        this.lastWagonPos = [...wp];
+        // Vector pointing behind the wagon
+        const bx = -Math.cos(heading);
+        const bz = Math.sin(heading);
 
-        if (dx !== 0 || dy !== 0 || dz !== 0) {
-            // Translate both the camera's position and target by the exact same amount.
-            // preserves any rotation or zooming 
-            const newPos = vec3.fromValues(cam.position[0] + dx, cam.position[1] + dy, cam.position[2] + dz);
-            const newTarget = vec3.fromValues(cam.target[0] + dx, cam.target[1] + dy, cam.target[2] + dz);
-            
-            cam.setPosition(newPos);
-            cam.setTarget(newTarget);
-        }
+        const cx = wp[0] + bx * followDist;
+        const cy = wp[1] + followHeight;
+        const cz = wp[2] + bz * followDist;
+
+        cam.setPosition(vec3.fromValues(cx, cy, cz));
+
+        // Vector pointing slightly in front of the wagon for the target
+        const forwardX = Math.cos(heading);
+        const forwardZ = -Math.sin(heading);
+        const lookAheadDist = 2;
+
+        const tx = wp[0] + forwardX * lookAheadDist;
+        const ty = wp[1] + 3; // slightly above ground level
+        const tz = wp[2] + forwardZ * lookAheadDist;
+        cam.setTarget(vec3.fromValues(tx, ty, tz));
 
         this._constrainCameraToBounds();
     }
