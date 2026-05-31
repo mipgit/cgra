@@ -67,7 +67,7 @@ export class MyScene extends CGFscene {
     // Enhanced shader clouds initialization
     this.cloudSpeed = 1.0;
     this.shaderCloudScale = 0.45;
-    this.shaderCloudAlpha = 0.75;
+    this.shaderCloudAlpha = 0.45;
     this.shaderCloudDensity = 0.42;
     this.cloudTime = 0.0;
 
