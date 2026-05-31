@@ -24,9 +24,9 @@ The objective is to manage the wagon's health (starting at 100 HP, decaying by 1
 ---
 
 ## 2. Instructions to Run
-1. Ensure you have a WebGL-compatible browser (Chrome, Firefox, Edge, etc.).
-2. Open `project/index.html` directly or through a local development server (like VS Code Live Server).
-3. The project dependencies are included in the `lib` folder.
+1. Ensure you have a WebGL-compatible browser (Chrome, Firefox, or Edge recommended).
+2. Serve the project through a local development server (e.g. VS Code Live Server) and open `index.html`. Opening the file directly may not work due to browser security restrictions on local file access.
+3. All dependencies are included in the `lib` folder so no installation required.
 
 ---
 
@@ -54,8 +54,8 @@ Below is a clear checklist of all implemented features, organized by the **10 su
 *   **Mandatory**:
     *   [x] **Sky & Environment**: A sky dome with moving clouds (procedural shader) and a directional sun system that provides consistent lighting across the map.
 *   **Advanced**:
-    *   [x] **Procedural Moving Clouds**: Animated cloud layer (as a second texture) near the sky-sphere.
-        - *Details:* A custom sky fragment shader translates a noise texture coordinate dynamically: $\text{UV}_{\text{cloud}} = \text{UV}_{\text{base}} + \vec{d}_{\text{wind}} \cdot \text{time}$.
+    *   [x] **Procedural Moving Clouds**: Animated cloud layer generated procedurally in the sky fragment shader.
+        - *Details:* A 2D value noise function generates cloud density from time-offset UV coordinates: $\text{UV}_{\text{cloud}} = (\text{pos.xz} / \text{pos.y}) \cdot \text{scale} + \vec{d}_{\text{wind}} \cdot \text{time}$. Cloud edges are softened with `smoothstep` and faded at the horizon.
 
 ---
 
@@ -105,11 +105,12 @@ Below is a clear checklist of all implemented features, organized by the **10 su
 ### 6. Wagon Interaction Mechanics & Physics
 *   **Mandatory**:
     *   [x] **Steering System**: Interactive front-wheel steering where the wheel rotation matches the steering angle.
-    *   [x] **Pickup System**: Ability to detect, pick up, and carry up to two hay bales. Bales are placed side-by-side in the front of the wagon bed with synchronized orientations.
+    *   [x] **Pickup System**: Ability to detect, pick up, and carry up to two hay bales. Bales are placed side-by-side in the back of the wagon bed (the open half) with synchronized orientations.
 *   **Advanced**:
     *   [x] **Movement Physics**: Realistic wagon handling featuring acceleration, deceleration, and braking with simulated inertia (advanced kinematics physics model):
         $$v_{t+1} = v_t + (a_{\text{engine}} - C_f \cdot v_t - C_b \cdot \text{brake}) \cdot dt$$
 *   **Extra / Bonus**:
+    *   [x] **Terrain-Dependent Speed**: The wagon moves faster on the road path (factor $1.35$) and slower through grass (factor $0.75$). The effect is smoothly interpolated based on how much of the wagon's footprint is on the path, sampled at three points (centre, front, rear).
     *   [x] **Asymmetric Dual-Zone Collision Detection**: Rather than simple circular proximity checks, the wagon is split into two distinct Oriented Bounding Box (OBB) local zones:
         1.  **Zone 1 (Wagon Bed & Wheels)**: Spans local $X: [-2.5, 2.5]$, $Z: [-1.6, 1.6]$ (width $3.2$).
         2.  **Zone 2 (Front Horses)**: Spans local $X: [2.5, 8.0]$, $Z: [-3.2, 3.2]$ (width $6.4$ - extra wide to protect the side-by-side horses).
@@ -164,14 +165,14 @@ OBB SAT Barn Collision Workflow:
 
 ### 8. Interface Elements (HUD & dat.GUI)
 *   **Mandatory**:
-    *   [x] **dat.GUI Folder integration**: A dedicated folder named **"Gameplay Stats"** inside `dat.GUI` (`MyInterface.js`) which uses real-time polling (`.listen()`) to update the variables: HP, last damage, last restore, bales delivered, and score.
+    *   [x] **dat.GUI controls**: Camera mode selector (Wagon / Orbit / Bird's Eye) and cloud parameter sliders (speed, density, scale, cutoff) in the dat.GUI panel.
 *   **Advanced**:
-    *   [x] **HUD Interface**: Real-time display of Score, Wagon HP (with health bar) and a Hay Bale count.
+    *   [x] **HUD Interface**: Real-time HTML overlay displaying Score, Wagon HP (with animated health bar), and Hay Bale delivery count.
     *   [x] **Camera Modes**: Three distinct modes: Wagon (follows the wagon), Orbit (mouse-controlled rotation around the wagon), and Bird's Eye.
         - *Details:* Wagon follow camera rotates with the heading vector and targets slightly in front of the horses; Orbit orbits the chassis; Bird's eye provides a fixed top-down tactical overview.
 *   **Extra / Bonus**:
-    *   [x] **Read-Only Locking**: dat.GUI stats are configured as read-only (`pointer-events = 'none'`) to act as an un-cheatable output dashboard.
-    *   [x] **Glassmorphic Interactive HUD prompts**: UI prompt cards ("Press P to Pick" / "Press L to Drop") featuring bounce and glow keyframe animations.
+    *   [x] **Non-interactive HUD**: HTML overlay stats use `pointer-events: none` so the canvas stays fully interactive while stats are displayed.
+    *   [x] **Contextual HUD prompts**: UI prompt cards ("Press P to Pick" / "Press L to Drop") appear with bounce and glow animations when the player is near a bale or at the barn.
 
 ---
 
@@ -196,37 +197,57 @@ OBB SAT Barn Collision Workflow:
 
 ---
 
-## 5. Required Screenshots
-According to the final delivery guidelines, exactly 5 screenshots in Full HD resolution (1920x1080 pixels) in PNG/GIF format are submitted. The folder links are referenced below using your repository structure:
+## 5. Screenshots
 
-| Screenshot File (Moodle Name) | Category | Description | Preview |
-| :--- | :--- | :--- | :--- |
-| **project-t12g05-1.png** | Screenshot 1 | **Overall scene overview (wide angle):** Heightmap terrain, dynamic lighting, and sky. | ![ project-t12g05-1 ](project/screenshots/project-t12g05-1.png) |
-| **project-t12g05-2.png** | Screenshot 2 | **Flower rocks and floor detail:** Road path blending, grass, and procedural flowers. | ![ project-t12g05-2 ](project/screenshots/project-t12g05-1.png) |
-| **project-t12g05-3.png** | Screenshot 3 | **Wagon close-up (showing model detail, textures):** Hierarchical Prairie Schooner model. | ![ project-t12g05-3 ](project/screenshots/project-t12g05-1.png) |
-| **project-t12g05-4.gif** | Animated Screenshot 4 | **Shader animation (animated GIF) - Grass:** Dynamic wind-blowing grass movement. | ![ project-t12g05-4 ](project/screenshots/project-t12g05-1.gif) |
+Exactly 5 screenshots at 1920×1080 resolution are included in the `screenshots/` folder:
+
+| File | Description |
+| :--- | :--- |
+| **project-t12g05-1.png** | Overall scene overview (wide angle) : terrain, sky, and lighting. |
+| **project-t12g05-2.png** | Ground detail : flowers, rocks, grass patches, and road path blending. |
+| **project-t12g05-3.png** | Wagon close-up : hierarchical model, textures, and horse. |
+| **project-t12g05-4.gif** | Shader animation (animated GIF) : grass wind shader. |
+| **project-t12g05-5.png** | Gameplay overview : HUD, health bar, hay bale indicator, and barn delivery zone. |
+
+![Scene Overview](screenshots/project-t12g05-1.png)
+![Ground Detail](screenshots/project-t12g05-2.png)
+![Wagon Close-up](screenshots/project-t12g05-3.png)
+![Grass Wind Shader](screenshots/project-t12g05-4.gif)
+![Gameplay HUD](screenshots/project-t12g05-5.png)
 
 ---
 
 ## 6. Known Issues / Limitations
-?
+
+- Collisions with obstacles lack visual feedback : damage is applied and shown in the HUD but there is no screen effect or animation indicating a hit.
+- Gameplay stats (HP, damage, restore, score) are displayed through a custom HTML overlay HUD instead of dat.GUI numeric bars; the dat.GUI panel is used for scene controls (camera, clouds) only.
+- Instantaneous damage and health restore values are not individually tracked or displayed per event.
 
 ---
 
 ## 7. AI Use Declaration
-This project was developed with assistance from **Google Gemini (Antigravity AI Assistant)**. The AI tool was utilized to:
-1. **Calibrate Math Models**: Assisted in testing and correcting the asymmetric offset values for OBB SAT barn collision ($shift = 2.75$, half-length $= 5.25$) to accurately bound the horse models.
 
-ADICIONEM AS VOSSAS
+The following AI tools were used during development:
+
+- **Google Gemini**: Assisted in calibrating math models : specifically testing and correcting the asymmetric offset values for OBB SAT barn collision ($shift = 2.75$, half-length $= 5.25$) to accurately bound the horse models.
+
+**Claude Code / OpenCode**: The base code was always written independently first. These tools were used to:
+
+1. **Design tuning**: Adjusting shader values, animation timing, and visual parameters after features were already working.
+
+2. **Feature guidance**: Getting guidance on more complex implementations like the collision system and horse animation.
+
+3. **Guidelines compliance**: Cross-checking the project against the delivery requirements and fixing README issues.
 
 ---
 
 ## 8. Project Structure
-- `field/`: Grass and Flower field generation.
-- `game/`: Wagon, Bale, and Game Controller logic.
-- `shapes/`: Primitive geometric shapes.
-- `static_elements/`: Barn, Rocks, and Trees.
-- `shaders/`: GLSL shaders for all world objects.
-- `textures/`: Image assets for the scene.
+- `field/`: Grass and flower field generation.
+- `game/`: Wagon, hay bale, and game controller logic.
+- `shapes/`: Primitive geometric shapes (cube, cylinder, sphere, etc.).
+- `static_elements/`: Barn, rocks, and trees.
+- `objects/`: Horse OBJ/MTL mesh files for import.
+- `shaders/`: GLSL vertex and fragment shaders for all scene elements.
+- `textures/`: Image assets (terrain, grass, wood, sky, etc.).
 
 ---
