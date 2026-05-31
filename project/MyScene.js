@@ -479,14 +479,14 @@ export class MyScene extends CGFscene {
     for (let p = 0; p < 14; p++) {
         const pcx = (Math.random() - 0.5) * 2 * DETAIL_EDGE;
         const pcz = (Math.random() - 0.5) * 2 * DETAIL_EDGE;
-        if (onPath(pcx, pcz) || tooFar(pcx, pcz)) continue;
+        if (tooFar(pcx, pcz)) continue;
         const count = 3 + Math.floor(Math.random() * 5);
         for (let j = 0; j < count; j++) {
             const angle = Math.random() * Math.PI * 2;
             const r = Math.sqrt(Math.random()) * 4.0;
             const x = pcx + Math.cos(angle) * r;
             const z = pcz + Math.sin(angle) * r;
-            if (onPath(x, z) || tooFar(x, z) || isNearWagon(x, z)) continue;
+            if (tooFar(x, z) || isNearWagon(x, z)) continue;
             this.rockInstances.push({
                 x, z, rotY: Math.random() * Math.PI * 2, scale: 1.0 + Math.random() * 2.0,
             });
