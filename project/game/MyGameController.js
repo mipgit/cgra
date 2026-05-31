@@ -326,6 +326,7 @@ export class MyGameController {
         const idle    = document.getElementById('idle-hint');
         const over    = document.getElementById('gameover-overlay');
         const prompt  = document.getElementById('pickup-prompt');
+        const dropPrompt = document.getElementById('drop-prompt');
 
         if (scoreEl) scoreEl.textContent = this.score;
         if (hpText)  hpText.textContent  = Math.ceil(this.wagonController.hp);
@@ -339,10 +340,26 @@ export class MyGameController {
             over.classList.toggle('visible', this.state === 'gameover');
         }
 
+        const w = this.wagonController;
+
+        let canDrop = false;
+        if (this.state === 'running' && w.bales.length > 0) {
+            const [cx, , cz] = this._barnDeliveryCenter();
+            const dx = w.position[0] - cx;
+            const dz = w.position[2] - cz;
+            if ((dx * dx + dz * dz) < (this.barn.activationRadius * this.barn.activationRadius)) {
+                canDrop = true;
+            }
+        }
+
+        if (dropPrompt) {
+            dropPrompt.classList.toggle('visible', canDrop);
+        }
+
         if (prompt) {
             let canPickup = false;
-            const w = this.wagonController;
-            if (this.state === 'running' && w.bales.length < 2) {
+            // Only allow pickup prompt if not displaying the drop prompt
+            if (this.state === 'running' && w.bales.length < 2 && !canDrop) {
                 for (const b of this.bales) {
                     if (b.state !== 'free') continue;
                     const dx = b.position[0] - w.position[0];
