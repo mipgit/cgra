@@ -5,12 +5,10 @@ in vec2 vTexCoord;
 uniform sampler2D uSampler; // base terrain texture (from appearance)
 uniform sampler2D uSampler2; // heightmap
 uniform sampler2D uPathTexture; // path texture
+uniform sampler2D uPathMaskTexture; // map mask for the path
 uniform vec3 uSunDir; // sun direction in terrain local coordinates
 uniform float uHeightScale;
 uniform vec2 uTexelSize;
-uniform float uPathWidth;
-uniform float uPathWaveAmplitude;
-uniform float uPathWaveFrequency;
 
 out vec4 fragColor;
 
@@ -45,11 +43,10 @@ void main() {
     float shade = ambient + diffuse * 0.75;
     shade = clamp(shade, 0.30, 1.0);
 
-    // Create dirt path with texture
-    float pathCenterY = 0.5 + sin(vTexCoord.x * uPathWaveFrequency) * uPathWaveAmplitude;
-    float distFromPath = abs(vTexCoord.y - pathCenterY);
-    float pathMask = step(distFromPath, uPathWidth);
-    
+    // Use the painted map as the path mask instead of a procedural curve.
+    float maskValue = texture(uPathMaskTexture, vTexCoord).r;
+    float pathMask = smoothstep(0.45, 0.65, maskValue);
+
     vec3 finalColor = mix(base, pathTexel, pathMask);
 
     fragColor = vec4(finalColor * shade, 1.0);

@@ -1,15 +1,17 @@
-import { CGFobject, CGFappearance } from '../../../lib/CGF.js';
-import { MyCube } from '../../MyCube.js';
+import { CGFobject, CGFappearance, CGFtexture } from '../../../lib/CGF.js';
+import { MyCube } from '../../shapes/MyCube.js';
 import { MyGambrelRoof } from './MyGambrelRoof.js'; 
 import { MyGable } from './MyGable.js';
+import { MyQuad } from '../../shapes/MyQuad.js';
 
 
 export class MyBarn extends CGFobject {
-    constructor(scene, position, activationRadius = 5.0, scale = 1.5) {
+    constructor(scene, position, activationRadius = 10.0, scale = 1.0) {
         super(scene);
         
         // Anel e Posição
         this.position = position;
+        this.rotation = 0;
         this.activationRadius = activationRadius;
         this.isActive = false; // Controlador altera isto
         this.ring = new MyRing(this.scene, 1.0, 0.85, 48);
@@ -17,6 +19,7 @@ export class MyBarn extends CGFobject {
         // Escala e Componentes
         this.scale = scale;
         this.cube = new MyCube(scene);
+        this.door = new MyQuad(scene);
         this.roof = new MyGambrelRoof(scene);
         this.gable = new MyGable(scene);
 
@@ -51,6 +54,15 @@ export class MyBarn extends CGFobject {
         this.ringActive.setDiffuse(0.30, 0.80, 0.30, 1);
         this.ringActive.setEmission(0.20, 0.55, 0.20, 1);
         this.ringActive.setSpecular(0, 0, 0, 1);
+
+        // --- MATERIAIS DA PORTA (TRANSPARENTE) ---        
+        this.woodTexture = new CGFtexture(scene, "textures/wood.jpg");
+        this.doorMat = new CGFappearance(scene);
+        this.doorMat.setAmbient(0.8, 0.6, 0.4, 0.60); 
+        this.doorMat.setDiffuse(0.8, 0.6, 0.4, 0.60);
+        this.doorMat.setSpecular(0.1, 0.08, 0.05, 0.60);
+        this.doorMat.setShininess(5.0);
+        this.doorMat.setTexture(this.woodTexture);
     }
 
     display() {
@@ -65,6 +77,7 @@ export class MyBarn extends CGFobject {
 
         s.pushMatrix();
         s.translate(this.position[0], this.position[1], this.position[2]);
+        s.rotate(this.rotation, 0, 1, 0);
 
 
         // ==========================================
@@ -125,6 +138,22 @@ export class MyBarn extends CGFobject {
             this.scene.scale(doorW, topPanelH, wallT);
             this.cube.display();
         this.scene.popMatrix();
+
+        // 1.7 Porta Transparente (wood.jpg) com Blending
+        s.gl.enable(s.gl.BLEND);
+        s.gl.blendColor(0, 0, 0, 0.60); 
+        s.gl.blendFunc(s.gl.CONSTANT_ALPHA, s.gl.ONE_MINUS_CONSTANT_ALPHA);
+        s.gl.depthMask(false);
+        
+        this.doorMat.apply();
+        this.scene.pushMatrix();
+            this.scene.translate(0, (doorH * 1.25) / 2, depth / 2 - wallT / 2);
+            this.scene.scale(doorW, doorH * 1.25, wallT * 0.3); // thin door, extended 25% in Y to overlap the ceiling
+            this.door.display();
+        this.scene.popMatrix();
+        
+        s.gl.depthMask(true);
+        s.gl.disable(s.gl.BLEND);
 
         // ==========================================
         // 2. EMPENAS VERMELHAS 
@@ -434,12 +463,14 @@ export class MyBarn extends CGFobject {
         // ==========================================
         // 7. ANEL DE ATIVAÇÃO
         // ==========================================
+        const ringPos = this.deliveryCenter ?? this.position;
         s.pushMatrix();
-            // Mantém-se encostado ao chão (Y + 0.02)
-            s.translate(this.position[0], this.position[1] + 0.02, this.position[2]);
+            s.translate(ringPos[0], ringPos[1] + 0.08, ringPos[2]);
             s.scale(this.activationRadius, 1, this.activationRadius);
             (this.isActive ? this.ringActive : this.ringInactive).apply();
+            s.gl.disable(s.gl.CULL_FACE);
             this.ring.display();
+            s.gl.enable(s.gl.CULL_FACE);
         s.popMatrix();
     }
 }

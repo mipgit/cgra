@@ -1,11 +1,11 @@
 import { CGFscene, CGFcamera, CGFaxis, CGFappearance, CGFtexture, CGFshader } from "../lib/CGF.js";
-import { MySphere } from "./MySphere.js";
-import { MyPlane } from "./MyPlane.js";
-import { MyGrassField } from "./MyGrassField.js";
-import { MyFlowerField } from "./MyFlowerField.js";
+import { MySphere } from "./shapes/MySphere.js";
+import { MyPlane } from "./shapes/MyPlane.js";
+import { MyGrassField } from "./field/MyGrassField.js";
+import { MyFlowerField } from "./field/MyFlowerField.js";
 import { MyRockField } from "./static_elements/MyRockField.js";
 import { MyTreeField } from "./static_elements/MyTreeField.js";
-import { MyGameController } from "./MyGameController.js";
+import { MyGameController } from "./game/MyGameController.js";
 import { MyHorse } from "./MyHorse.js";
 
 /**
@@ -36,13 +36,8 @@ export class MyScene extends CGFscene {
     this.sphere = new MySphere(this, 50, 50);
     this.terrain = new MyPlane(this, 100);
     
-    // Load all sky textures
-    this.textures = {
-      'basic': new CGFtexture(this, "textures/basic.jpg"),
-      'farm_road': new CGFtexture(this, "textures/farm_road.jpg"),
-      'full_clouds': new CGFtexture(this, "textures/full_clouds.jpg"),
-      'just_blue': new CGFtexture(this, "textures/just_blue.jpg")
-    };
+    // Load sky texture
+    this.skyTexture = new CGFtexture(this, "textures/just_blue.jpg");
     
     this.skyShader = new CGFshader(this.gl, "shaders/skyglow.vert", "shaders/skyglow.frag");
 
@@ -52,8 +47,7 @@ export class MyScene extends CGFscene {
     this.skyAppearance.setSpecular(0, 0, 0, 1);
     this.skyAppearance.setEmission(0, 0, 0, 1);
     this.skyAppearance.setShininess(120);
-    this.selectedTexture = 'just_blue';
-    this.skyAppearance.setTexture(this.textures[this.selectedTexture]);
+    this.skyAppearance.setTexture(this.skyTexture);
     this.skyAppearance.setTextureWrap('REPEAT', 'REPEAT');
 
     this.sunAppearance = new CGFappearance(this);
@@ -65,22 +59,27 @@ export class MyScene extends CGFscene {
     this.sunU = 4919 / 8192;
     this.sunV = 1387 / 4096;
 
+    // Enhanced shader clouds initialization
+    this.cloudSpeed = 1.0;
+    this.shaderCloudScale = 0.45;
+    this.shaderCloudAlpha = 0.45;
+    this.shaderCloudDensity = 0.42;
+    this.cloudTime = 0.0;
+
+    // Camera settings
+    this.selectedCamera = 'Wagon'; // 'Wagon' or 'Bird's Eye'
+
+
+
     this.terrainShader = new CGFshader(this.gl, "shaders/terrain.vert", "shaders/terrain.frag");
     this.heightmapTexture = new CGFtexture(this, "textures/heightmap.png");
     this.pathTexture = new CGFtexture(this, "textures/path.jpg");
+    this.pathMapTexture = new CGFtexture(this, "textures/pathMap.png");
     this.terrainShader.setUniformsValues({ uSampler2: 1 });
     this.terrainShader.setUniformsValues({ uPathTexture: 3 });
+    this.terrainShader.setUniformsValues({ uPathMaskTexture: 4 });
     this.terrainShader.setUniformsValues({ uHeightScale: 7.0 });
     this.terrainShader.setUniformsValues({ uTexelSize: [1.0 / 1024.0, 1.0 / 1024.0] });
-    
-    this.pathWidth = 0.06;
-    this.pathWaveAmplitude = 0.12;
-    this.pathWaveFrequency = 4.0;
-    this.terrainShader.setUniformsValues({
-      uPathWidth: this.pathWidth,
-      uPathWaveAmplitude: this.pathWaveAmplitude,
-      uPathWaveFrequency: this.pathWaveFrequency
-    });
 
     this.terrainAppearance = new CGFappearance(this);
     this.terrainAppearance.setAmbient(0.3, 0.3, 0.3, 1);
@@ -92,6 +91,171 @@ export class MyScene extends CGFscene {
     this.terrainAppearance.setTexture(this.terrainTexture);
     this.terrainAppearance.setTextureWrap('REPEAT', 'REPEAT');
 
+    this.onPath = (x, z) => this._isOnPathFromMap(x, z);
+
+    this.grassShader = new CGFshader(this.gl, "shaders/grass.vert", "shaders/grass.frag");
+    this.grassShader.setUniformsValues({
+        uColor: [0.2, 0.6, 0.15, 1.0], uWindStrength: 0.08, uWindSpeed: 1.5,
+        uTime: 0.0, uHeightmap: 1, uHeightScale: 7.0,
+    });
+
+    this.flowerShader = new CGFshader(this.gl, "shaders/flower.vert", "shaders/flower.frag");
+    this.flowerShader.setUniformsValues({
+        uWindStrength: 0.08, uWindSpeed: 1.5, uTime: 0.0,
+        uPetalTex: 0, uHeightmap: 1, uHeightScale: 7.0,
+    });
+    this.petalTexture = new CGFtexture(this, "textures/petal.png");
+
+    this.deadGrassShader = new CGFshader(this.gl, "shaders/grass.vert", "shaders/grass.frag");
+    this.deadGrassShader.setUniformsValues({
+      uColor: [0.31, 0.21, 0.0, 1.0], uWindStrength: 0.02, uWindSpeed: 0.6,
+      uTime: 0.0, uHeightmap: 1, uHeightScale: 7.0,
+    });
+
+    this.windStrength = 0.08;
+    this.windSpeed = 1.5;
+
+    this.staticShader = new CGFshader(this.gl, "shaders/static.vert", "shaders/static.frag");
+    this.staticShader.setUniformsValues({ uHeightmap: 1, uHeightScale: 7.0 });
+
+    this.flowerFields = [];
+    this.grassFields = [];
+    this.deadGrassFields = [];
+    this.rockFields = [];
+    this.treeFields = [];
+
+    this.displayAxis = false;
+
+    this.controller = new MyGameController(this, {
+      heightScale: 7.0, terrainHalfExtent: 100.0, heightmapUrl: 'textures/heightmap.png',
+    });
+    this.setUpdatePeriod(1000 / 60);
+    this._lastT = null;
+    this._hmReady = false;
+    this._pathReady = false;
+    this._worldGenerated = false;
+
+    this.horseTestMode = false;
+    this.horseTestSlot = 0;
+    this._testHorse = new MyHorse(this);
+  }
+
+  update(t) {
+    if (this._lastT == null) { this._lastT = t; return; }
+    const dt = Math.min(0.1, (t - this._lastT) / 1000);
+    this._lastT = t;
+    
+    if (!this._hmReady || !this._pathReady) {
+        this._ensureHeightmap();
+        this._ensurePathMap();
+        if (this._heightData && !this._hmReady) {
+            this._hmReady = true;
+            if (this.controller && typeof this.controller.onHeightmapLoaded === 'function') {
+                this.controller.onHeightmapLoaded();
+            }
+        }
+        if (this._pathData) this._pathReady = true;
+
+        if (this._hmReady && this._pathReady && !this._worldGenerated) {
+            this._generateWorld();
+            this._worldGenerated = true;
+        }
+    }
+    if (this.controller) this.controller.update(dt);
+
+    // Update enhanced clouds
+    this.cloudTime += dt * this.cloudSpeed;
+  }
+
+  initLights() {
+    this.lights[0].setPosition(0, 1, 0, 0); // Directional light coming from above
+    this.lights[0].setAmbient(0.3, 0.3, 0.3, 1.0);  
+    this.lights[0].setDiffuse(1.0, 1.0, 1.0, 1.0);  
+    this.lights[0].setSpecular(1.0, 1.0, 1.0, 1.0);
+    this.lights[0].enable();
+    this.lights[0].update();
+    
+    // Global ambient light for a "whole sky" feel
+    this.setGlobalAmbientLight(0.2, 0.2, 0.2, 1.0);
+  }
+
+  initCameras() {
+    this.cameras = {
+      'Wagon': new CGFcamera(0.4, 0.1, 500, vec3.fromValues(0, 5.5, 25), vec3.fromValues(0, 0, 0)),
+      'Orbit': new CGFcamera(0.4, 0.1, 500, vec3.fromValues(-40, 15, -20), vec3.fromValues(-40, 3, -40)),
+      'Birds Eye': new CGFcamera(0.4, 0.1, 500, vec3.fromValues(-84.2, 12.0, -42.8), vec3.fromValues(-40.0, 3.0, -40.0))
+    };
+    this.selectedCamera = 'Wagon';
+    this.camera = this.cameras[this.selectedCamera];
+  }
+
+  updateCameraMode(mode) {
+    this.camera = this.cameras[mode];
+    if (this.interface && typeof this.interface.setActiveCamera === 'function') {
+        this.interface.setActiveCamera(this.camera);
+    }
+  }
+
+
+  setDefaultAppearance() {
+    this.setAmbient(0.2, 0.2, 0.2, 1.0);
+    this.setDiffuse(0.6, 0.6, 0.6, 1.0);
+    this.setSpecular(0.2, 0.2, 0.2, 1.0);
+    this.setShininess(10.0);
+  }
+
+  _ensureHeightmap() {
+    if (this._heightData) return;
+    const img = this.heightmapTexture.image;
+    if (!img || !img.complete) return;
+    const canvas = document.createElement('canvas');
+    canvas.width = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0);
+    this._heightData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+    this._heightW = canvas.width;
+    this._heightH = canvas.height;
+  }
+
+  _ensurePathMap() {
+    if (this._pathData) return;
+    const img = this.pathMapTexture.image;
+    if (!img || !img.complete) return;
+
+    // Downscale very large path maps to avoid huge memory / CPU use
+    const MAX_DIM = 1024; // tweak if you need higher/lower resolution
+    const imgW = img.naturalWidth || img.width;
+    const imgH = img.naturalHeight || img.height;
+    const scale = Math.min(1, MAX_DIM / Math.max(1, imgW, imgH));
+    const canvasW = Math.max(1, Math.floor(imgW * scale));
+    const canvasH = Math.max(1, Math.floor(imgH * scale));
+    const canvas = document.createElement('canvas');
+    canvas.width = canvasW;
+    canvas.height = canvasH;
+    const ctx = canvas.getContext('2d');
+    
+    // Draw scaled image to reduce imageData size (and memory pressure)
+    ctx.drawImage(img, 0, 0, canvasW, canvasH);
+    const imgData = ctx.getImageData(0, 0, canvasW, canvasH).data;
+    this._pathData = imgData;
+    this._pathW = canvasW;
+    this._pathH = canvasH;
+  }
+
+  _isOnPathFromMap(x, z) {
+    this._ensurePathMap();
+    if (!this._pathData) return false;
+    const u = (x + 100) / 200;
+    const v = (z + 100) / 200;
+    const px = Math.floor(Math.min(this._pathW - 1, Math.max(0, u * this._pathW)));
+    const py = Math.floor(Math.min(this._pathH - 1, Math.max(0, v * this._pathH)));
+    const idx = (py * this._pathW + px) * 4;
+    const luminance = (0.299 * this._pathData[idx] + 0.587 * this._pathData[idx + 1] + 0.114 * this._pathData[idx + 2]) / 255;
+    return luminance > 0.5;
+  }
+
+  _generateWorld() {
     const pastelPalette = [
       [255, 182, 193], [230, 190, 255], [255, 218, 185],
       [255, 255, 180], [180, 255, 210], [200, 162, 200],
@@ -108,6 +272,12 @@ export class MyScene extends CGFscene {
     const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
     const jitterPct = (pct) => 1.0 + (Math.random() - 0.5) * 2 * pct;
+
+    const isNearWagon = (x, z) => {
+      const dx = x - (-40);
+      const dz = z - (-40);
+      return (dx * dx + dz * dz) < 64.0; // 8 units radius squared
+    };
 
     const makeFlower = (pcx, pcz, spread, species) => {
       const angle = Math.random() * Math.PI * 2;
@@ -186,17 +356,12 @@ export class MyScene extends CGFscene {
       }
     };
 
-    const pw = this.pathWidth, pa = this.pathWaveAmplitude, pf = this.pathWaveFrequency;
-    const onPath = (x, z) => {
-      const u = (x + 100) / 200;
-      const v = (z + 100) / 200;
-      return Math.abs(v - (0.5 + Math.sin(u * pf) * pa)) < pw;
-    };
-    this.onPath = onPath;
+    const onPath = this.onPath;
 
     const DETAIL_FULL = 60, DETAIL_EDGE = 110, MIN_DENSITY = 0.35;
     const tooFar = (x, z) => {
       const d = Math.sqrt(x*x + z*z);
+      if (d >= 98.0) return true; // ABSOLUTE LIMIT: prevent spawning outside the sky sphere (radius 100)
       if (d <= DETAIL_FULL) return false;
       const t = Math.min(1, (d - DETAIL_FULL) / (DETAIL_EDGE - DETAIL_FULL));
       return Math.random() > (1.0 - t * (1.0 - MIN_DENSITY));
@@ -207,7 +372,7 @@ export class MyScene extends CGFscene {
       const sp = makeSpecies();
       for (let f = 0; f < randi(10, 14); f++) {
         const fl = makeFlower(0, 0, 2.5, sp);
-        if (!onPath(fl.x, fl.z) && !tooFar(fl.x, fl.z)) this.flowerInstances.push(fl);
+        if (!onPath(fl.x, fl.z) && !tooFar(fl.x, fl.z) && !isNearWagon(fl.x, fl.z)) this.flowerInstances.push(fl);
       }
     }
 
@@ -220,31 +385,14 @@ export class MyScene extends CGFscene {
       const flowersInPatch = randi(10, 22);
       for (let f = 0; f < flowersInPatch; f++) {
         const fl = makeFlower(pcx, pcz, rand(3.0, 5.5), sp);
-        if (!onPath(fl.x, fl.z) && !tooFar(fl.x, fl.z)) this.flowerInstances.push(fl);
+        if (!onPath(fl.x, fl.z) && !tooFar(fl.x, fl.z) && !isNearWagon(fl.x, fl.z)) this.flowerInstances.push(fl);
       }
     }
 
-    this.grassShader = new CGFshader(this.gl, "shaders/grass.vert", "shaders/grass.frag");
-    this.grassShader.setUniformsValues({
-        uColor: [0.2, 0.6, 0.15, 1.0], uWindStrength: 0.08, uWindSpeed: 1.5,
-        uTime: 0.0, uHeightmap: 1, uHeightScale: 7.0,
-    });
-
-    this.flowerShader = new CGFshader(this.gl, "shaders/flower.vert", "shaders/flower.frag");
-    this.flowerShader.setUniformsValues({
-        uWindStrength: 0.08, uWindSpeed: 1.5, uTime: 0.0,
-        uPetalTex: 0, uHeightmap: 1, uHeightScale: 7.0,
-    });
-    this.petalTexture = new CGFtexture(this, "textures/petal.png");
-
-    this.deadGrassShader = new CGFshader(this.gl, "shaders/grass.vert", "shaders/grass.frag");
-    this.deadGrassShader.setUniformsValues({
-        uColor: [0.52, 0.42, 0.14, 1.0], uWindStrength: 0.04, uWindSpeed: 0.8,
-        uTime: 0.0, uHeightmap: 1, uHeightScale: 7.0,
-    });
-
-    this.windStrength = 0.08;
-    this.windSpeed = 1.5;
+    const FLOWER_CHUNK = 40;
+    this.flowerFields = [];
+    for (let i = 0; i < this.flowerInstances.length; i += FLOWER_CHUNK)
+      this.flowerFields.push(new MyFlowerField(this, this.flowerInstances.slice(i, i + FLOWER_CHUNK)));
 
     const makeFields = (positions) => {
         const CHUNK = 4000;
@@ -254,10 +402,21 @@ export class MyScene extends CGFscene {
         return fields;
     };
 
-    const FLOWER_CHUNK = 40;
-    this.flowerFields = [];
-    for (let i = 0; i < this.flowerInstances.length; i += FLOWER_CHUNK)
-        this.flowerFields.push(new MyFlowerField(this, this.flowerInstances.slice(i, i + FLOWER_CHUNK)));
+    const deadPatchRegions = [
+      { x: -58, z: -44, radius: 1.5 },
+      { x: -34, z: -28, radius: 2.0 },
+      { x: -12, z: 25, radius: 2.5 },
+      { x: 40, z: 0, radius: 2.0 },
+    ];
+
+    const insideDeadPatch = (x, z) => {
+      for (const region of deadPatchRegions) {
+        const dx = x - region.x;
+        const dz = z - region.z;
+        if (dx * dx + dz * dz <= region.radius * region.radius) return true;
+      }
+      return false;
+    };
 
     const greenPositions = [];
     const gridStep = 2;
@@ -270,7 +429,7 @@ export class MyScene extends CGFscene {
                 const r = Math.sqrt(Math.random()) * 2.2;
                 const x = cx + Math.cos(angle) * r;
                 const z = cz + Math.sin(angle) * r;
-                if (onPath(x, z) || tooFar(x, z)) continue;
+                if (onPath(x, z) || tooFar(x, z) || insideDeadPatch(x, z)) continue;
                 greenPositions.push({
                     x, z, rot: Math.random() * Math.PI * 2,
                     tilt: (Math.random() - 0.5) * 0.4, scale: 0.18 + Math.random() * 0.2,
@@ -281,40 +440,49 @@ export class MyScene extends CGFscene {
     this.grassFields = makeFields(greenPositions);
 
     const deadPositions = [];
-    for (let i = 0; i < 18; i++) {
-        const pcx = (Math.random() - 0.5) * 2 * DETAIL_EDGE;
-        const pcz = (Math.random() - 0.5) * 2 * DETAIL_EDGE;
-        if (onPath(pcx, pcz) || tooFar(pcx, pcz)) continue;
-        const count = 25 + Math.floor(Math.random() * 30);
-        for (let j = 0; j < count; j++) {
-            const angle = Math.random() * Math.PI * 2;
-            const r = Math.sqrt(Math.random()) * 3.5;
-            const x = pcx + Math.cos(angle) * r;
-            const z = pcz + Math.sin(angle) * r;
+    const fillDeadPatch = (centerX, centerZ, radius) => {
+      const step = 0.42;
+      for (let dx = -radius; dx <= radius; dx += step) {
+        for (let dz = -radius; dz <= radius; dz += step) {
+          const dist2 = dx * dx + dz * dz;
+          if (dist2 > radius * radius) continue;
+
+          const cells = 2 + Math.floor(Math.random() * 3);
+          for (let i = 0; i < cells; i++) {
+            const x = centerX + dx + (Math.random() - 0.5) * step * 0.7;
+            const z = centerZ + dz + (Math.random() - 0.5) * step * 0.7;
             if (onPath(x, z) || tooFar(x, z)) continue;
             deadPositions.push({
-                x, z, rot: Math.random() * Math.PI * 2,
-                tilt: (Math.random() - 0.5) * 0.6, scale: 0.18 + Math.random() * 0.22,
+              x,
+              z,
+              rot: Math.random() * Math.PI * 2,
+              tilt: (Math.random() - 0.5) * 0.16,
+              scale: 0.16 + Math.random() * 0.10,
             });
+          }
         }
-    }
-    this.deadGrassFields = makeFields(deadPositions);
+      }
+    };
 
-    this.staticShader = new CGFshader(this.gl, "shaders/static.vert", "shaders/static.frag");
-    this.staticShader.setUniformsValues({ uHeightmap: 1, uHeightScale: 7.0 });
+    for (const region of deadPatchRegions) {
+      fillDeadPatch(region.x, region.z, region.radius);
+    }
+
+    this.deadGrassFields = makeFields(deadPositions);
+    this._deadPositions = deadPositions;
 
     this.rockInstances = [];
     for (let p = 0; p < 14; p++) {
         const pcx = (Math.random() - 0.5) * 2 * DETAIL_EDGE;
         const pcz = (Math.random() - 0.5) * 2 * DETAIL_EDGE;
-        if (onPath(pcx, pcz) || tooFar(pcx, pcz)) continue;
+        if (tooFar(pcx, pcz)) continue;
         const count = 3 + Math.floor(Math.random() * 5);
         for (let j = 0; j < count; j++) {
             const angle = Math.random() * Math.PI * 2;
             const r = Math.sqrt(Math.random()) * 4.0;
             const x = pcx + Math.cos(angle) * r;
             const z = pcz + Math.sin(angle) * r;
-            if (onPath(x, z) || tooFar(x, z)) continue;
+            if (tooFar(x, z) || isNearWagon(x, z)) continue;
             this.rockInstances.push({
                 x, z, rotY: Math.random() * Math.PI * 2, scale: 1.0 + Math.random() * 2.0,
             });
@@ -325,102 +493,25 @@ export class MyScene extends CGFscene {
         this.rockFields.push(new MyRockField(this, this.rockInstances.slice(i, i + 30)));
 
     this.treeInstances = [];
-    for (let p = 0; p < 10; p++) {
-        const pcx = (Math.random() - 0.5) * 2 * DETAIL_EDGE;
-        const pcz = (Math.random() - 0.5) * 2 * DETAIL_EDGE;
-        if (onPath(pcx, pcz) || tooFar(pcx, pcz)) continue;
-        const count = 2 + Math.floor(Math.random() * 4);
-        for (let j = 0; j < count; j++) {
-            const angle = Math.random() * Math.PI * 2;
-            const r = Math.sqrt(Math.random()) * 5.0;
-            const x = pcx + Math.cos(angle) * r;
-            const z = pcz + Math.sin(angle) * r;
-            if (onPath(x, z) || tooFar(x, z)) continue;
-            this.treeInstances.push({
-                x, z, rotY: Math.random() * Math.PI * 2, scale: 0.7 + Math.random() * 0.8,
-            });
-        }
+    for (let p = 0; p < 22; p++) {
+      const pcx = (Math.random() - 0.5) * 2 * DETAIL_EDGE;
+      const pcz = (Math.random() - 0.5) * 2 * DETAIL_EDGE;
+      if (onPath(pcx, pcz) || tooFar(pcx, pcz)) continue;
+      const count = 3 + Math.floor(Math.random() * 6); // more trees per patch
+      for (let j = 0; j < count; j++) {
+        const angle = Math.random() * Math.PI * 2;
+        const r = Math.sqrt(Math.random()) * 5.0;
+        const x = pcx + Math.cos(angle) * r;
+        const z = pcz + Math.sin(angle) * r;
+        if (onPath(x, z) || tooFar(x, z) || isNearWagon(x, z)) continue;
+        this.treeInstances.push({
+          x, z, rotY: Math.random() * Math.PI * 2, scale: 1.0 + Math.random() * 1.2,
+        });
+      }
     }
     this.treeFields = [];
     for (let i = 0; i < this.treeInstances.length; i += 15)
-        this.treeFields.push(new MyTreeField(this, this.treeInstances.slice(i, i + 15)));
-
-    this.displayAxis = true;
-
-    this.controller = new MyGameController(this, {
-      heightScale: 7.0, terrainHalfExtent: 100.0, heightmapUrl: 'textures/heightmap.png',
-    });
-
-    // Debug test horse — separate from the controller's wagon-bound horse.
-    // When `horseTestMode` is true, the wagon (and rest of the controller)
-    // stops rendering and this horse is drawn at world origin instead. The
-    // `horseTestSlot` value (0..3) picks which of the 4 spliced OBJs shows.
-    this.horseTestMode = false;
-    this.horseTestSlot = 0;
-    this._testHorse = new MyHorse(this);
-
-    this.setUpdatePeriod(1000 / 60);
-    this._lastT = null;
-    this._hmReady = false;
-  }
-
-  update(t) {
-    if (this._lastT == null) { this._lastT = t; return; }
-    const dt = Math.min(0.1, (t - this._lastT) / 1000);
-    this._lastT = t;
-    
-    if (!this._hmReady) {
-        this._ensureHeightmap();
-        if (this._heightData) {
-            this._hmReady = true;
-            if (this.controller && typeof this.controller.onHeightmapLoaded === 'function') {
-                this.controller.onHeightmapLoaded();
-            }
-        }
-    }
-    if (this.controller) this.controller.update(dt);
-  }
-
-  initLights() {
-    this.lights[0].setPosition(0, 0, 0, 1);
-    this.lights[0].setAmbient(1.0, 1.0, 1.0, 1.0);  
-    this.lights[0].setDiffuse(2.0, 2.0, 2.0, 1.0);  
-    this.lights[0].setSpecular(1.5, 1.5, 1.425, 1.0);
-    this.lights[0].setSpecular(1.0, 1.0, 0.95, 1.0);
-    this.lights[0].setConstantAttenuation(1.0);
-    this.lights[0].setLinearAttenuation(0.0);
-    this.lights[0].setQuadraticAttenuation(0.0);
-    this.lights[0].enable();
-    this.lights[0].update();
-  }
-
-  initCameras() {
-    this.camera = new CGFcamera(0.4, 0.1, 500, vec3.fromValues(0, 0.5, 10), vec3.fromValues(0, 0.5, 0));
-  }
-
-  setDefaultAppearance() {
-    this.setAmbient(0.2, 0.4, 0.8, 1.0);
-    this.setDiffuse(0.2, 0.4, 0.8, 1.0);
-    this.setSpecular(0.2, 0.4, 0.8, 1.0);
-    this.setShininess(10.0);
-  }
-
-  updateTexture() {
-    this.skyAppearance.setTexture(this.textures[this.selectedTexture]);
-  }
-
-  _ensureHeightmap() {
-    if (this._heightData) return;
-    const img = this.heightmapTexture.image;
-    if (!img || !img.complete) return;
-    const canvas = document.createElement('canvas');
-    canvas.width = img.naturalWidth;
-    canvas.height = img.naturalHeight;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(img, 0, 0);
-    this._heightData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-    this._heightW = canvas.width;
-    this._heightH = canvas.height;
+      this.treeFields.push(new MyTreeField(this, this.treeInstances.slice(i, i + 15)));
   }
 
   getHeight(x, z) {
@@ -451,14 +542,20 @@ export class MyScene extends CGFscene {
     let sunDir = vec3.fromValues(sunX, sunY, sunZ);
     vec3.normalize(sunDir, sunDir);
 
-    this.lights[0].setPosition(sunX, sunY, sunZ, 1);
+    this.lights[0].setPosition(sunX, sunY, sunZ, 0);
     this.lights[0].update();
 
     if (this.displayAxis) this.axis.display();
 
     // Sky sphere
     this.setActiveShader(this.skyShader);
-    this.skyShader.setUniformsValues({ uSunDir: [sunDir[0], sunDir[1], sunDir[2]] });
+    this.skyShader.setUniformsValues({ 
+        uSunDir: [sunDir[0], sunDir[1], sunDir[2]],
+        uTime: this.cloudTime,
+        uCloudAlpha: this.shaderCloudAlpha,
+        uCloudScale: this.shaderCloudScale,
+        uCloudDensityCutoff: this.shaderCloudDensity
+    });
     this.pushMatrix();
     this.scale(100, 100, 100);
     this.gl.disable(this.gl.CULL_FACE);
@@ -478,6 +575,7 @@ export class MyScene extends CGFscene {
     this.terrainShader.setUniformsValues({ uSunDir: terrainSunDir });
     this.heightmapTexture.bind(1); 
     this.pathTexture.bind(3); 
+    this.pathMapTexture.bind(4);
     this.terrainAppearance.apply();
     this.terrain.display();
     this.popMatrix();
@@ -503,7 +601,7 @@ export class MyScene extends CGFscene {
     this.grassShader.setUniformsValues({ uTime: now });
     for (const f of this.grassFields) f.display();
     this.setActiveShader(this.deadGrassShader);
-    this.deadGrassShader.setUniformsValues({ uTime: now });
+    this.deadGrassShader.setUniformsValues({ uTime: now, uColor: [0.31, 0.21, 0.0, 1.0] });
     for (const f of this.deadGrassFields) f.display();
     this.setActiveShader(this.defaultShader);
     this.gl.enable(this.gl.CULL_FACE);
