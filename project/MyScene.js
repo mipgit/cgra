@@ -365,6 +365,7 @@ export class MyScene extends CGFscene {
     const DETAIL_FULL = 60, DETAIL_EDGE = 110, MIN_DENSITY = 0.35;
     const tooFar = (x, z) => {
       const d = Math.sqrt(x*x + z*z);
+      if (d >= 98.0) return true; // ABSOLUTE LIMIT: prevent spawning outside the sky sphere (radius 100)
       if (d <= DETAIL_FULL) return false;
       const t = Math.min(1, (d - DETAIL_FULL) / (DETAIL_EDGE - DETAIL_FULL));
       return Math.random() > (1.0 - t * (1.0 - MIN_DENSITY));
