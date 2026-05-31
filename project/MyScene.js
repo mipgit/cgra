@@ -37,10 +37,9 @@ export class MyScene extends CGFscene {
     
     // Load all sky textures
     this.textures = {
-      'basic': new CGFtexture(this, "textures/basic.jpg"),
-      'farm_road': new CGFtexture(this, "textures/farm_road.jpg"),
-      'full_clouds': new CGFtexture(this, "textures/full_clouds.jpg"),
-      'just_blue': new CGFtexture(this, "textures/just_blue.jpg")
+      'just_blue': new CGFtexture(this, "textures/just_blue.jpg"),
+      'cloudy_sky': new CGFtexture(this, "textures/basic.jpg"),
+      'farm_road': new CGFtexture(this, "textures/farm_road.jpg")
     };
     
     this.skyShader = new CGFshader(this.gl, "shaders/skyglow.vert", "shaders/skyglow.frag");
@@ -63,6 +62,18 @@ export class MyScene extends CGFscene {
 
     this.sunU = 4919 / 8192;
     this.sunV = 1387 / 4096;
+
+    // Enhanced shader clouds initialization
+    this.cloudSpeed = 1.0;
+    this.shaderCloudScale = 0.45;
+    this.shaderCloudAlpha = 0.45;
+    this.shaderCloudDensity = 0.42;
+    this.cloudTime = 0.0;
+
+    // Camera settings
+    this.selectedCamera = 'Wagon'; // 'Wagon' or 'Bird's Eye'
+
+
 
     this.terrainShader = new CGFshader(this.gl, "shaders/terrain.vert", "shaders/terrain.frag");
     this.heightmapTexture = new CGFtexture(this, "textures/heightmap.png");
@@ -117,7 +128,7 @@ export class MyScene extends CGFscene {
     this.rockFields = [];
     this.treeFields = [];
 
-    this.displayAxis = true;
+    this.displayAxis = false;
 
     this.controller = new MyGameController(this, {
       heightScale: 7.0, terrainHalfExtent: 100.0, heightmapUrl: 'textures/heightmap.png',
@@ -151,6 +162,9 @@ export class MyScene extends CGFscene {
         }
     }
     if (this.controller) this.controller.update(dt);
+
+    // Update enhanced clouds
+    this.cloudTime += dt * this.cloudSpeed;
   }
 
   initLights() {
@@ -167,8 +181,21 @@ export class MyScene extends CGFscene {
   }
 
   initCameras() {
-    this.camera = new CGFcamera(0.4, 0.1, 500, vec3.fromValues(0, 0.5, 10), vec3.fromValues(0, 0.5, 0));
+    this.cameras = {
+      'Wagon': new CGFcamera(0.4, 0.1, 500, vec3.fromValues(0, 5.5, 25), vec3.fromValues(0, 0, 0)),
+      'Birds Eye': new CGFcamera(0.4, 0.1, 500, vec3.fromValues(-84.2, 12.0, -42.8), vec3.fromValues(-40.0, 3.0, -40.0))
+    };
+    this.selectedCamera = 'Wagon';
+    this.camera = this.cameras[this.selectedCamera];
   }
+
+  updateCameraMode(mode) {
+    this.camera = this.cameras[mode];
+    if (this.interface && typeof this.interface.setActiveCamera === 'function') {
+        this.interface.setActiveCamera(this.camera);
+    }
+  }
+
 
   setDefaultAppearance() {
     this.setAmbient(0.2, 0.4, 0.8, 1.0);
@@ -249,6 +276,12 @@ export class MyScene extends CGFscene {
     const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
     const jitterPct = (pct) => 1.0 + (Math.random() - 0.5) * 2 * pct;
+
+    const isNearWagon = (x, z) => {
+      const dx = x - (-40);
+      const dz = z - (-40);
+      return (dx * dx + dz * dz) < 9.0; // 3 units radius squared
+    };
 
     const makeFlower = (pcx, pcz, spread, species) => {
       const angle = Math.random() * Math.PI * 2;
@@ -332,6 +365,7 @@ export class MyScene extends CGFscene {
     const DETAIL_FULL = 60, DETAIL_EDGE = 110, MIN_DENSITY = 0.35;
     const tooFar = (x, z) => {
       const d = Math.sqrt(x*x + z*z);
+      if (d >= 98.0) return true; // ABSOLUTE LIMIT: prevent spawning outside the sky sphere (radius 100)
       if (d <= DETAIL_FULL) return false;
       const t = Math.min(1, (d - DETAIL_FULL) / (DETAIL_EDGE - DETAIL_FULL));
       return Math.random() > (1.0 - t * (1.0 - MIN_DENSITY));
@@ -342,7 +376,7 @@ export class MyScene extends CGFscene {
       const sp = makeSpecies();
       for (let f = 0; f < randi(10, 14); f++) {
         const fl = makeFlower(0, 0, 2.5, sp);
-        if (!onPath(fl.x, fl.z) && !tooFar(fl.x, fl.z)) this.flowerInstances.push(fl);
+        if (!onPath(fl.x, fl.z) && !tooFar(fl.x, fl.z) && !isNearWagon(fl.x, fl.z)) this.flowerInstances.push(fl);
       }
     }
 
@@ -355,7 +389,7 @@ export class MyScene extends CGFscene {
       const flowersInPatch = randi(10, 22);
       for (let f = 0; f < flowersInPatch; f++) {
         const fl = makeFlower(pcx, pcz, rand(3.0, 5.5), sp);
-        if (!onPath(fl.x, fl.z) && !tooFar(fl.x, fl.z)) this.flowerInstances.push(fl);
+        if (!onPath(fl.x, fl.z) && !tooFar(fl.x, fl.z) && !isNearWagon(fl.x, fl.z)) this.flowerInstances.push(fl);
       }
     }
 
@@ -452,7 +486,7 @@ export class MyScene extends CGFscene {
             const r = Math.sqrt(Math.random()) * 4.0;
             const x = pcx + Math.cos(angle) * r;
             const z = pcz + Math.sin(angle) * r;
-            if (onPath(x, z) || tooFar(x, z)) continue;
+            if (onPath(x, z) || tooFar(x, z) || isNearWagon(x, z)) continue;
             this.rockInstances.push({
                 x, z, rotY: Math.random() * Math.PI * 2, scale: 1.0 + Math.random() * 2.0,
             });
@@ -473,7 +507,7 @@ export class MyScene extends CGFscene {
         const r = Math.sqrt(Math.random()) * 5.0;
         const x = pcx + Math.cos(angle) * r;
         const z = pcz + Math.sin(angle) * r;
-        if (onPath(x, z) || tooFar(x, z)) continue;
+        if (onPath(x, z) || tooFar(x, z) || isNearWagon(x, z)) continue;
         this.treeInstances.push({
           x, z, rotY: Math.random() * Math.PI * 2, scale: 1.0 + Math.random() * 1.2,
         });
@@ -519,7 +553,13 @@ export class MyScene extends CGFscene {
 
     // Sky sphere
     this.setActiveShader(this.skyShader);
-    this.skyShader.setUniformsValues({ uSunDir: [sunDir[0], sunDir[1], sunDir[2]] });
+    this.skyShader.setUniformsValues({ 
+        uSunDir: [sunDir[0], sunDir[1], sunDir[2]],
+        uTime: this.cloudTime,
+        uCloudAlpha: this.shaderCloudAlpha,
+        uCloudScale: this.shaderCloudScale,
+        uCloudDensityCutoff: this.shaderCloudDensity
+    });
     this.pushMatrix();
     this.scale(100, 100, 100);
     this.gl.disable(this.gl.CULL_FACE);
