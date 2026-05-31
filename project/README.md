@@ -201,20 +201,12 @@ OBB SAT Barn Collision Workflow:
 
 Exactly 5 screenshots at 1920×1080 resolution are included in the `screenshots/` folder:
 
-| File | Description |
-| :--- | :--- |
-| **project-t12g05-1.png** | Overall scene overview (wide angle) : terrain, sky, and lighting. |
-| **project-t12g05-2.png** | Ground detail : flowers, rocks, grass patches, and road path blending. |
-| **project-t12g05-3.png** | Wagon close-up : hierarchical model, textures, and horse. |
-| **project-t12g05-4.gif** | Shader animation (animated GIF) : grass wind shader. |
-| **project-t12g05-5.png** | Gameplay overview : HUD, health bar, hay bale indicator, and barn delivery zone. |
-
-![Scene Overview](screenshots/project-t12g05-1.png)
-![Ground Detail](screenshots/project-t12g05-2.png)
-![Wagon Close-up](screenshots/project-t12g05-3.png)
-![Grass Wind Shader](screenshots/project-t12g05-4.gif)
-![Gameplay HUD](screenshots/project-t12g05-5.png)
-
+| File | Image | Description |
+| :--- | :--- | :--- |
+| **project-t12g05-1.png** | <img src="screenshots/project-t12g05-1.png" width="400" alt="Scene Overview"> | Overall scene overview (wide angle) : terrain, sky, and lighting. |
+| **project-t12g05-2.png** | <img src="screenshots/project-t12g05-2.png" width="400" alt="Ground Detail">  | Ground detail : flowers, rocks, grass patches, and road path blending. |
+| **project-t12g05-3.png** | <img src="screenshots/project-t12g05-3.png" width="400" alt="Wagon Close-up"> | Wagon close-up : hierarchical model, textures, and horse. |
+| **project-t12g05-4.gif** | <img src="screenshots/project-t12g05-4.gif" width="400" alt="Grass Wind Shader"> | Shader animation (animated GIF) : grass wind shader. |
 ---
 
 ## 6. Known Issues / Limitations
@@ -229,8 +221,6 @@ Exactly 5 screenshots at 1920×1080 resolution are included in the `screenshots/
 
 The following AI tools were used during development:
 
-- **Google Gemini**: Assisted in calibrating math models : specifically testing and correcting the asymmetric offset values for OBB SAT barn collision ($shift = 2.75$, half-length $= 5.25$) to accurately bound the horse models.
-
 **Claude Code / OpenCode**: The base code was always written independently first. These tools were used to:
 
 1. **Design tuning**: Adjusting shader values, animation timing, and visual parameters after features were already working.
@@ -238,6 +228,8 @@ The following AI tools were used during development:
 2. **Feature guidance**: Getting guidance on more complex implementations like the collision system and horse animation.
 
 3. **Guidelines compliance**: Cross-checking the project against the delivery requirements and fixing README issues.
+
+- **Google Gemini**: Assisted in calibrating math models : specifically testing and correcting the asymmetric offset values for OBB SAT barn collision to accurately bound the horse models.
 
 ---
 
