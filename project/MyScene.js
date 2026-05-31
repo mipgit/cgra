@@ -64,6 +64,14 @@ export class MyScene extends CGFscene {
     this.sunU = 4919 / 8192;
     this.sunV = 1387 / 4096;
 
+    // Enhanced shader clouds initialization
+    this.cloudSpeed = 1.0;
+    this.shaderCloudScale = 0.45;
+    this.shaderCloudAlpha = 0.75;
+    this.shaderCloudDensity = 0.42;
+    this.cloudTime = 0.0;
+
+
     this.terrainShader = new CGFshader(this.gl, "shaders/terrain.vert", "shaders/terrain.frag");
     this.heightmapTexture = new CGFtexture(this, "textures/heightmap.png");
     this.pathTexture = new CGFtexture(this, "textures/path.jpg");
@@ -151,6 +159,9 @@ export class MyScene extends CGFscene {
         }
     }
     if (this.controller) this.controller.update(dt);
+
+    // Update enhanced clouds
+    this.cloudTime += dt * this.cloudSpeed;
   }
 
   initLights() {
@@ -519,7 +530,13 @@ export class MyScene extends CGFscene {
 
     // Sky sphere
     this.setActiveShader(this.skyShader);
-    this.skyShader.setUniformsValues({ uSunDir: [sunDir[0], sunDir[1], sunDir[2]] });
+    this.skyShader.setUniformsValues({ 
+        uSunDir: [sunDir[0], sunDir[1], sunDir[2]],
+        uTime: this.cloudTime,
+        uCloudAlpha: this.shaderCloudAlpha,
+        uCloudScale: this.shaderCloudScale,
+        uCloudDensityCutoff: this.shaderCloudDensity
+    });
     this.pushMatrix();
     this.scale(100, 100, 100);
     this.gl.disable(this.gl.CULL_FACE);
