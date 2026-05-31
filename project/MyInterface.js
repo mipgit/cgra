@@ -25,9 +25,12 @@ export class MyInterface extends CGFinterface {
         this.gui.add(this.scene, 'displayAxis').name('axis');
 
         // Camera selection
-        this.gui.add(this.scene, 'selectedCamera', ['Wagon', 'Birds Eye'])
+        this.gui.add(this.scene, 'selectedCamera', ['Wagon', 'Orbit', 'Birds Eye'])
               .name('Camera Mode')
-              .onChange((val) => this.scene.updateCameraMode(val));
+              .onChange((val) => {
+                  this.scene.updateCameraMode(val);
+                  if (document.activeElement) document.activeElement.blur();
+              });
 
 
         

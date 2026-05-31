@@ -182,6 +182,7 @@ export class MyScene extends CGFscene {
   initCameras() {
     this.cameras = {
       'Wagon': new CGFcamera(0.4, 0.1, 500, vec3.fromValues(0, 5.5, 25), vec3.fromValues(0, 0, 0)),
+      'Orbit': new CGFcamera(0.4, 0.1, 500, vec3.fromValues(-40, 15, -20), vec3.fromValues(-40, 3, -40)),
       'Birds Eye': new CGFcamera(0.4, 0.1, 500, vec3.fromValues(-84.2, 12.0, -42.8), vec3.fromValues(-40.0, 3.0, -40.0))
     };
     this.selectedCamera = 'Wagon';
