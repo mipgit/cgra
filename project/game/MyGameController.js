@@ -325,6 +325,7 @@ export class MyGameController {
         const baleEl  = document.getElementById('hud-bales');
         const idle    = document.getElementById('idle-hint');
         const over    = document.getElementById('gameover-overlay');
+        const prompt  = document.getElementById('pickup-prompt');
 
         if (scoreEl) scoreEl.textContent = this.score;
         if (hpText)  hpText.textContent  = Math.ceil(this.wagonController.hp);
@@ -336,6 +337,25 @@ export class MyGameController {
         }
         if (over) {
             over.classList.toggle('visible', this.state === 'gameover');
+        }
+
+        if (prompt) {
+            let canPickup = false;
+            const w = this.wagonController;
+            if (this.state === 'running' && w.bales.length < 2) {
+                for (const b of this.bales) {
+                    if (b.state !== 'free') continue;
+                    const dx = b.position[0] - w.position[0];
+                    const dz = b.position[2] - w.position[2];
+                    const d2 = dx * dx + dz * dz;
+                    const range = (b.radius + w.bodySize.z * 0.5 + 0.2);
+                    if (d2 < range * range) {
+                        canPickup = true;
+                        break;
+                    }
+                }
+            }
+            prompt.classList.toggle('visible', canPickup);
         }
     }
 

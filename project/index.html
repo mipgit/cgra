@@ -123,6 +123,66 @@ canvas {
     opacity: 0.8;
     text-shadow: 0 1px 3px rgba(0,0,0,0.4);
 }
+
+/* Beautiful dynamic pickup prompt styling */
+#pickup-prompt {
+    position: absolute;
+    bottom: 12%; left: 50%;
+    transform: translate(-50%, 20px) scale(0.9);
+    z-index: 110;
+    color: #fff;
+    font-size: 15px;
+    font-weight: 600;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.4);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275), transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    background: linear-gradient(135deg, rgba(255, 179, 71, 0.9), rgba(255, 94, 98, 0.9));
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    padding: 10px 22px;
+    border-radius: 30px;
+    border: 1px solid rgba(255,255,255,0.25);
+    box-shadow: 0 8px 24px rgba(255, 94, 98, 0.3), 0 4px 8px rgba(0,0,0,0.2);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+#pickup-prompt.visible {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+    animation: prompt-glow-pulse 1.5s infinite alternate ease-in-out;
+}
+
+#pickup-prompt b {
+    background: #fff;
+    color: #ff5e62;
+    padding: 3px 9px;
+    border-radius: 6px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    font-size: 15px;
+    font-weight: bold;
+    display: inline-block;
+    animation: key-bounce 0.6s infinite alternate ease-in-out;
+}
+
+@keyframes prompt-glow-pulse {
+    0% {
+        box-shadow: 0 8px 24px rgba(255, 94, 98, 0.3), 0 4px 8px rgba(0,0,0,0.2);
+    }
+    100% {
+        box-shadow: 0 8px 32px rgba(255, 94, 98, 0.55), 0 4px 12px rgba(0,0,0,0.3);
+        transform: translate(-50%, -2px) scale(1.03);
+    }
+}
+
+@keyframes key-bounce {
+    0% { transform: translateY(0); }
+    100% { transform: translateY(-3px); }
+}
 </style>
 </head>
 <body>
@@ -145,6 +205,11 @@ canvas {
 <div id="gameover-overlay">
     <h1>Game Over</h1>
     <p>Press <b>R</b> to restart</p>
+</div>
+
+<!-- Pickup Prompt -->
+<div id="pickup-prompt">
+    Press <b>P</b> to pick!
 </div>
 
 <script type="module" src="main.js"></script>
