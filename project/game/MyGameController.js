@@ -237,10 +237,9 @@ export class MyGameController {
         // Wagon integrates physics regardless of state (settles after gameover)
         this.wagonController.update(dt, this.sampleGroundY, this.scene.onPath);
         this._constrainWagonToBounds();
+        this._handleCollisions();
 
         if (this.state === 'running') {
-            this._handleRockCollisions();
-            
             // Allow barn delivery to consume the L key press
             const delivered = this._handleDelivery();
             this._handlePickupDrop(delivered);
@@ -318,43 +317,153 @@ export class MyGameController {
         }
     }
 
-    _handleRockCollisions() {
+    _handleCollisions() {
         const w = this.wagonController;
-        const half = w.bodySize.x * 0.5;
 
-        // Helper genérico para aplicar colisão; o dano fica opcional.
-        const applyCollision = (objX, objZ, objRadius, applyDamage = true) => {
-            const dx = w.position[0] - objX;
-            const dz = w.position[2] - objZ;
-            const d2 = dx*dx + dz*dz;
-            const r = objRadius + half;
-            
-            if (d2 >= r * r) return; // Não bateu
+        // --- Helper: check if a circle collides with the wagon OBB ---
+        const checkWagonCollisionWithCircle = (cx, cz, circleR) => {
+            const heading = w.heading;
+            const dx = cx - w.position[0];
+            const dz = cz - w.position[2];
 
-            // Sofre Dano
-            if (applyDamage && this.elapsed - this._lastRockHitT > 0.4) {
-                w.hp = Math.max(0, w.hp - 10);
-                this.lastDamage = this.score;
-                this._lastRockHitT = this.elapsed;
+            // Rotate circle center into wagon's local space (using positive heading)
+            const cosH = Math.cos(heading);
+            const sinH = Math.sin(heading);
+            const lx = dx * cosH - dz * sinH;
+            const lz = dx * sinH + dz * cosH;
+
+            // Wagon dimensions: length 5.0 (half 2.5), width 2.5 (half 1.25)
+            const halfL = 2.5;
+            const halfW = 1.25;
+
+            const closestX = Math.max(-halfL, Math.min(halfL, lx));
+            const closestZ = Math.max(-halfW, Math.min(halfW, lz));
+
+            const diffX = lx - closestX;
+            const diffZ = lz - closestZ;
+            const distSq = diffX * diffX + diffZ * diffZ;
+
+            if (distSq >= circleR * circleR) return null;
+
+            let overlap, pushWx, pushWz;
+            if (distSq > 0.0001) {
+                const dist = Math.sqrt(distSq);
+                overlap = circleR - dist;
+                const localPushX = diffX / dist;
+                const localPushZ = diffZ / dist;
+
+                // Rotate push vector back to world space (using heading)
+                pushWx = localPushX * cosH + localPushZ * sinH;
+                pushWz = -localPushX * sinH + localPushZ * cosH;
+            } else {
+                const overlapX = halfL - Math.abs(lx);
+                const overlapZ = halfW - Math.abs(lz);
+                let localPushX = 0, localPushZ = 0;
+                if (overlapX < overlapZ) {
+                    localPushX = lx >= 0 ? 1 : -1;
+                    overlap = overlapX + circleR;
+                } else {
+                    localPushZ = lz >= 0 ? 1 : -1;
+                    overlap = overlapZ + circleR;
+                }
+                pushWx = localPushX * cosH + localPushZ * sinH;
+                pushWz = -localPushX * sinH + localPushZ * cosH;
             }
-            // Afasta fisicamente o carro
-            const d = Math.sqrt(d2) || 0.0001;
-            const push = (r - d) + 0.04;
-            w.position[0] += (dx / d) * push;
-            w.position[2] += (dz / d) * push;
-            w.speed *= 0.3;
+
+            return {
+                pushX: -pushWx * overlap,
+                pushZ: -pushWz * overlap
+            };
         };
 
-        // Verifica colisão com todas as Pedras geradas na cena
-        // raio de colisão mais apertado para evitar bloquear o movimento ao lado
+        // --- Helper: check if a circle collides with the rotated barn OBB ---
+        const checkCircleCollisionWithBarn = (circleX, circleZ, circleR) => {
+            const rot = this.barn.rotation;
+            const dx = circleX - this.barn.position[0];
+            const dz = circleZ - this.barn.position[2];
+
+            const cosR = Math.cos(rot);
+            const sinR = Math.sin(rot);
+            const lx = dx * cosR - dz * sinR;
+            const lz = dx * sinR + dz * cosR;
+
+            const halfW = 2.0 * this.barn.scale; // 6.0
+            const halfD = 2.5 * this.barn.scale; // 7.5
+
+            const closestX = Math.max(-halfW, Math.min(halfW, lx));
+            const closestZ = Math.max(-halfD, Math.min(halfD, lz));
+
+            const diffX = lx - closestX;
+            const diffZ = lz - closestZ;
+            const distSq = diffX * diffX + diffZ * diffZ;
+
+            if (distSq >= circleR * circleR) return null;
+
+            let overlap, pushLx, pushLz;
+            if (distSq > 0.0001) {
+                const dist = Math.sqrt(distSq);
+                overlap = circleR - dist;
+                pushLx = diffX / dist;
+                pushLz = diffZ / dist;
+            } else {
+                const overlapX = halfW - Math.abs(lx);
+                const overlapZ = halfD - Math.abs(lz);
+                if (overlapX < overlapZ) {
+                    pushLx = lx >= 0 ? 1 : -1;
+                    overlap = overlapX + circleR;
+                } else {
+                    pushLz = lz >= 0 ? 1 : -1;
+                    overlap = overlapZ + circleR;
+                }
+            }
+
+            const pushWx = pushLx * cosR + pushLz * sinR;
+            const pushWz = -pushLx * sinR + pushLz * cosR;
+
+            return {
+                pushX: pushWx * overlap,
+                pushZ: pushWz * overlap
+            };
+        };
+
+        // 1. Rock Collisions
         for (const rock of this.scene.rockInstances) {
-            applyCollision(rock.x, rock.z, rock.scale * 0.3);
+            const collision = checkWagonCollisionWithCircle(rock.x, rock.z, rock.scale * 0.3);
+            if (collision) {
+                w.position[0] += collision.pushX;
+                w.position[2] += collision.pushZ;
+                w.speed *= 0.3;
+                if (this.elapsed - this._lastRockHitT > 0.4) {
+                    w.hp = Math.max(0, w.hp - 10);
+                    this.lastDamage = this.score;
+                    this._lastRockHitT = this.elapsed;
+                }
+            }
         }
 
-        // Verifica colisão com todas as Árvores geradas na cena
-        // Apenas empurra; árvores não tiram vida/pontos.
+        // 2. Tree Collisions
         for (const tree of this.scene.treeInstances) {
-            applyCollision(tree.x, tree.z, tree.scale * 0.4, false);
+            const collision = checkWagonCollisionWithCircle(tree.x, tree.z, tree.scale * 0.4);
+            if (collision) {
+                w.position[0] += collision.pushX;
+                w.position[2] += collision.pushZ;
+                w.speed *= 0.3;
+            }
+        }
+
+        // 3. Barn Collision
+        if (this.barn) {
+            const offsets = [-1.75, 0.0, 1.75]; // Back, Center, Front
+            for (const offset of offsets) {
+                const cx = w.position[0] + offset * Math.cos(w.heading);
+                const cz = w.position[2] - offset * Math.sin(w.heading); // Correct mirrored Z-axis projection
+                const collision = checkCircleCollisionWithBarn(cx, cz, 1.25);
+                if (collision) {
+                    w.position[0] += collision.pushX;
+                    w.position[2] += collision.pushZ;
+                    w.speed *= -0.2; // slight bounce
+                }
+            }
         }
     }
 
